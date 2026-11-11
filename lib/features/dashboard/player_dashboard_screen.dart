@@ -5,7 +5,6 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/cyber_glass_backdrop.dart';
 import '../profile/profile_screen.dart';
 import '../profile/settings_screen.dart';
-import 'tabs/booking_tab.dart';
 import 'tabs/coaches_tab.dart';
 import 'tabs/sessions_tab.dart';
 
@@ -74,7 +73,6 @@ class _PlayerDashboardScreenState extends State<PlayerDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
-      const BookingIntegrationTab(),
       SessionsTab(
           isSubscribed: _isSubscribed,
           onUnlockSubscription: _onSubscribeSuccess),
@@ -99,7 +97,7 @@ class _PlayerDashboardScreenState extends State<PlayerDashboardScreen> {
             children: [
               _buildTopBar(),
               Expanded(
-                child: pages[_currentIndex],
+                child: pages[_currentIndex < pages.length ? _currentIndex : 0],
               ),
               _buildNormalBottomNavBar(),
             ],
@@ -188,24 +186,18 @@ class _PlayerDashboardScreenState extends State<PlayerDashboardScreen> {
                 children: [
                   _buildNavItem(
                     index: 0,
-                    label: 'Booking',
-                    icon: Icons.home_outlined,
-                    activeIcon: Icons.home_rounded,
-                  ),
-                  _buildNavItem(
-                    index: 1,
                     label: 'Sessions',
                     icon: Icons.play_arrow_outlined,
                     activeIcon: Icons.play_arrow_rounded,
                   ),
                   _buildNavItem(
-                    index: 2,
+                    index: 1,
                     label: 'Connect',
                     icon: Icons.groups_outlined,
                     activeIcon: Icons.groups_rounded,
                   ),
                   _buildNavItem(
-                    index: 3,
+                    index: 2,
                     label: 'Profile',
                     icon: Icons.person_outline_rounded,
                     activeIcon: Icons.person_rounded,
