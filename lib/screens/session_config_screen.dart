@@ -219,18 +219,24 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                                 border: isSelected
                                     ? null
                                     : Border.all(
-                                        color: const Color(0xFFE2EEFF),
-                                        width: 1.5,
+                                        color: AppTheme.cardBorderColor,
+                                        width: 1.2,
                                       ),
                                 boxShadow: isSelected
                                     ? [
                                         BoxShadow(
-                                          color: AppTheme.electricBlue.withAlpha(70),
-                                          blurRadius: 10,
+                                          color: AppTheme.electricBlue.withValues(alpha: 0.35),
+                                          blurRadius: 12,
                                           offset: const Offset(0, 4),
                                         ),
                                       ]
-                                    : [],
+                                    : [
+                                        BoxShadow(
+                                          color: const Color(0xFF0F2B5C).withValues(alpha: 0.05),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
                               ),
                               child: Center(
                                 child: Text(
@@ -833,14 +839,19 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFFE0EEFF),
-          width: 1.5,
+          color: AppTheme.cardBorderColor,
+          width: 1.3,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.electricBlue.withAlpha(10),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
+            color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: AppTheme.electricBlue.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
           ),
         ],
       ),

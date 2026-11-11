@@ -34,17 +34,17 @@ class _BookingIntegrationTabState extends State<BookingIntegrationTab> {
       'isPopular': true,
     },
     {
-      'name': 'Hexgen Turf Arena',
-      'sport': 'Football',
-      'sportIcon': '⚽',
+      'name': 'Ace Pickleball Club',
+      'sport': 'Pickleball',
+      'sportIcon': '🏓',
       'location': 'Indiranagar, Bangalore',
-      'distance': '3.4 km',
+      'distance': '2.1 km',
       'rating': '4.8',
       'reviews': '142',
-      'price': '₹ 1,200 / hr',
-      'image': 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&auto=format&fit=crop&q=80',
-      'amenities': ['FIFA Turf', 'Locker Room', 'Dugouts'],
-      'isPopular': false,
+      'price': '₹ 800 / hr',
+      'image': 'https://images.unsplash.com/photo-1599474924187-334a4ae5bd3c?w=800&auto=format&fit=crop&q=80',
+      'amenities': ['Pro Cushion Court', 'Paddle Rental', 'Ball Machine'],
+      'isPopular': true,
     },
     {
       'name': 'Royal Cricket Pavilion',
@@ -60,29 +60,16 @@ class _BookingIntegrationTabState extends State<BookingIntegrationTab> {
       'isPopular': true,
     },
     {
-      'name': 'Smash Point Badminton & Pickleball',
-      'sport': 'Badminton',
-      'sportIcon': '🏸',
+      'name': 'Hexgen Pickleball Arena',
+      'sport': 'Pickleball',
+      'sportIcon': '🏓',
       'location': 'HSR Layout, Bangalore',
-      'distance': '4.1 km',
-      'rating': '4.7',
-      'reviews': '96',
-      'price': '₹ 600 / hr',
-      'image': 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&auto=format&fit=crop&q=80',
-      'amenities': ['BWF Synthetic', 'Air Conditioned', 'Pro Shop'],
-      'isPopular': false,
-    },
-    {
-      'name': 'KickOff Premier 7v7 Arena',
-      'sport': 'Football',
-      'sportIcon': '⚽',
-      'location': 'Whitefield, Bangalore',
-      'distance': '6.2 km',
-      'rating': '4.8',
-      'reviews': '118',
-      'price': '₹ 1,400 / hr',
-      'image': 'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?w=800&auto=format&fit=crop&q=80',
-      'amenities': ['7v7 Pitch', 'Night Stadium Lights', 'Parking'],
+      'distance': '3.8 km',
+      'rating': '4.9',
+      'reviews': '156',
+      'price': '₹ 750 / hr',
+      'image': 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=800&auto=format&fit=crop&q=80',
+      'amenities': ['USAPA Standard', 'Floodlights', 'Tournament Nets'],
       'isPopular': false,
     },
   ];
@@ -90,8 +77,7 @@ class _BookingIntegrationTabState extends State<BookingIntegrationTab> {
   static const List<Map<String, String>> _sportsFilterList = [
     {'label': 'All', 'icon': '🏆'},
     {'label': 'Cricket', 'icon': '🏏'},
-    {'label': 'Football', 'icon': '⚽'},
-    {'label': 'Badminton', 'icon': '🏸'},
+    {'label': 'Pickleball', 'icon': '🏓'},
   ];
 
   static const List<Map<String, dynamic>> _tournamentsList = [
@@ -106,14 +92,14 @@ class _BookingIntegrationTabState extends State<BookingIntegrationTab> {
       'tag': 'FAST FILLING 🔥',
     },
     {
-      'title': 'Midnight 5v5 Football Blitz',
-      'category': 'Knockout Cup • Floodlit Arena',
-      'date': 'Next Friday, 10:00 PM',
-      'venue': 'Hexgen Turf Arena • Lane A & B',
-      'prize': '₹ 30,000 Cash Pool',
+      'title': 'Hexgen Open Pickleball Slam',
+      'category': 'Doubles Championship • DUPR Rated',
+      'date': 'Next Saturday, 04:00 PM',
+      'venue': 'Ace Pickleball Club • Court 1 & 2',
+      'prize': '₹ 35,000 Cash Pool',
       'slotsLeft': '4 Slots Left',
-      'entryFee': '₹ 1,800 / Team',
-      'tag': 'WEEKEND NIGHT ⚡',
+      'entryFee': '₹ 1,200 / Team',
+      'tag': 'DUPR RATED ⚡',
     },
   ];
 
@@ -121,7 +107,7 @@ class _BookingIntegrationTabState extends State<BookingIntegrationTab> {
     {
       'code': 'HEXGEN100',
       'title': 'Flat ₹100 Off on First Lane Booking',
-      'desc': 'Valid on Cricket batting lanes and football turfs across Bangalore.',
+      'desc': 'Valid on Cricket batting lanes and Pickleball courts across Bangalore.',
       'discount': '₹100 OFF',
       'validTill': 'Valid till 30 Nov 2026',
     },
@@ -186,9 +172,16 @@ class _BookingIntegrationTabState extends State<BookingIntegrationTab> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.65),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 1.2),
+                        border: Border.all(color: const Color(0xFFD6E4F8), width: 1.2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -246,13 +239,13 @@ class _BookingIntegrationTabState extends State<BookingIntegrationTab> {
               filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.65),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 1.2),
+                  border: Border.all(color: const Color(0xFFD6E4F8), width: 1.2),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF1C3E78).withValues(alpha: 0.05),
-                      blurRadius: 10,
+                      color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
+                      blurRadius: 12,
                       offset: const Offset(0, 3),
                     ),
                   ],
@@ -302,11 +295,11 @@ class _BookingIntegrationTabState extends State<BookingIntegrationTab> {
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
                       gradient: isSelected ? AppTheme.primaryCtaGradient : null,
-                      color: isSelected ? null : Colors.white.withValues(alpha: 0.65),
+                      color: isSelected ? null : Colors.white,
                       borderRadius: BorderRadius.circular(20),
                       border: isSelected
                           ? null
-                          : Border.all(color: Colors.white.withValues(alpha: 0.85), width: 1.2),
+                          : Border.all(color: const Color(0xFFD6E4F8), width: 1.2),
                       boxShadow: isSelected
                           ? [
                               BoxShadow(
@@ -317,7 +310,7 @@ class _BookingIntegrationTabState extends State<BookingIntegrationTab> {
                             ]
                           : [
                               BoxShadow(
-                                color: const Color(0xFF1C3E78).withValues(alpha: 0.05),
+                                color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
@@ -354,9 +347,16 @@ class _BookingIntegrationTabState extends State<BookingIntegrationTab> {
               filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.65),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 1.2),
+                  border: Border.all(color: const Color(0xFFD6E4F8), width: 1.2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Row(
                   children: [
@@ -525,14 +525,14 @@ class _BookingIntegrationTabState extends State<BookingIntegrationTab> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF0038B8), Color(0xFF0057FF), Color(0xFF00D4FF)],
+          colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF0038B8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.electricBlue.withValues(alpha: 0.35),
+            color: const Color(0xFF0057FF).withValues(alpha: 0.28),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -651,14 +651,14 @@ class _BookingIntegrationTabState extends State<BookingIntegrationTab> {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.65),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 1.2),
+                border: Border.all(color: const Color(0xFFD6E4F8), width: 1.2),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF1C3E78).withValues(alpha: 0.08),
-                    blurRadius: 18,
-                    offset: const Offset(0, 5),
+                    color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),

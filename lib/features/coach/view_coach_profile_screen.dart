@@ -21,20 +21,51 @@ class ViewCoachProfileScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text('Meet Your Coach', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.navyBlue, fontFamily: 'Roboto')),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.navyBlue, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
       body: CyberGlassBackdrop(
         child: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
-          children: [
+          child: Column(
+            children: [
+              // Top Bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppTheme.cardBorderColor,
+                            width: 1.2,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.arrow_back_ios_rounded,
+                          color: AppTheme.navyBlue,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Meet Your Coach',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: AppTheme.navyBlue,
+                        fontFamily: 'Roboto',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+                  children: [
             HexgenCard(
               hasGlow: true,
               hasTopAccent: true,
@@ -117,9 +148,12 @@ class ViewCoachProfileScreen extends StatelessWidget {
           ],
         ),
       ),
-    ),
-    );
-  }
+    ],
+  ),
+),
+),
+);
+}
 
   Widget _metric(String l, String v, IconData i) {
     return Column(

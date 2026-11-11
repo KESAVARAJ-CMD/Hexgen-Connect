@@ -3,11 +3,15 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
 import '../core/widgets/cyber_glass_backdrop.dart';
 import 'check_slots_screen.dart';
-import 'session_config_screen.dart';
 import 'checkout_screen.dart';
 
 class BookingStagesScreen extends StatefulWidget {
-  const BookingStagesScreen({super.key});
+  final String selectedSport;
+
+  const BookingStagesScreen({
+    super.key,
+    this.selectedSport = 'Cricket',
+  });
 
   @override
   State<BookingStagesScreen> createState() => _BookingStagesScreenState();
@@ -15,13 +19,8 @@ class BookingStagesScreen extends StatefulWidget {
 
 class _BookingStagesScreenState extends State<BookingStagesScreen> {
   bool _stage1Completed = false;
-  bool _stage2Completed = false;
 
-  int get _currentStage {
-    if (!_stage1Completed) return 1;
-    if (!_stage2Completed) return 2;
-    return 3;
-  }
+  int get _currentStage => _stage1Completed ? 2 : 1;
 
   void _openStage1() async {
     final result = await Navigator.of(context).push(
@@ -36,36 +35,11 @@ class _BookingStagesScreenState extends State<BookingStagesScreen> {
     }
   }
 
-  void _openStage2() async {
+  void _openStage2() {
     if (!_stage1Completed) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please complete Stage 1 (Select Slot) first.'),
-          backgroundColor: AppTheme.navyBlue,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    final result = await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const SessionConfigScreen(),
-      ),
-    );
-
-    if (result == true || result != null) {
-      setState(() {
-        _stage2Completed = true;
-      });
-    }
-  }
-
-  void _openStage3() {
-    if (!_stage1Completed || !_stage2Completed) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please complete Stage 1 and Stage 2 first.'),
           backgroundColor: AppTheme.navyBlue,
           behavior: SnackBarBehavior.floating,
         ),
@@ -82,11 +56,7 @@ class _BookingStagesScreenState extends State<BookingStagesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final progressValue = _stage2Completed
-        ? 1.0
-        : _stage1Completed
-            ? 0.66
-            : 0.33;
+    final progressValue = _stage1Completed ? 1.0 : 0.5;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -155,7 +125,7 @@ class _BookingStagesScreenState extends State<BookingStagesScreen> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                'Stage $_currentStage of 3',
+                                'Stage $_currentStage of 2',
                                 style: const TextStyle(
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.bold,
@@ -195,18 +165,22 @@ class _BookingStagesScreenState extends State<BookingStagesScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(22),
                             decoration: BoxDecoration(
-                              color: Colors.white.withAlpha(220),
+                              color: Colors.white,
                               borderRadius: BorderRadius.circular(28),
                               border: Border.all(
-                                color: Colors.white,
-                                width: 1.8,
+                                color: const Color(0xFFD6E4F8),
+                                width: 1.4,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppTheme.electricBlue.withAlpha(25),
-                                  blurRadius: 28,
-                                  spreadRadius: 2,
-                                  offset: const Offset(0, 8),
+                                  color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
+                                  blurRadius: 22,
+                                  offset: const Offset(0, 6),
+                                ),
+                                BoxShadow(
+                                  color: AppTheme.electricBlue.withValues(alpha: 0.06),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 2),
                                 ),
                               ],
                             ),
@@ -228,16 +202,18 @@ class _BookingStagesScreenState extends State<BookingStagesScreen> {
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
-                                      children: const [
+                                      children: [
                                         Icon(
-                                          Icons.sports_cricket_rounded,
+                                          widget.selectedSport == 'Pickleball'
+                                              ? Icons.sports_baseball_rounded
+                                              : Icons.sports_cricket_rounded,
                                           color: AppTheme.electricBlue,
                                           size: 20,
                                         ),
-                                        SizedBox(width: 8),
+                                        const SizedBox(width: 8),
                                         Text(
-                                          'HexGen Sports Arena',
-                                          style: TextStyle(
+                                          'HexGen Sports Arena (${widget.selectedSport})',
+                                          style: const TextStyle(
                                             fontSize: 15,
                                             fontWeight: FontWeight.w800,
                                             color: AppTheme.navyBlue,
@@ -263,7 +239,7 @@ class _BookingStagesScreenState extends State<BookingStagesScreen> {
                                 const SizedBox(height: 4),
 
                                 const Text(
-                                  'Follow the 3 quick steps below to confirm your session',
+                                  'Follow the 2 quick steps below to confirm your session',
                                   style: TextStyle(
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w500,
@@ -293,11 +269,9 @@ class _BookingStagesScreenState extends State<BookingStagesScreen> {
                                               _stage1Completed
                                                   ? const Color(0xFF22C55E)
                                                   : AppTheme.electricBlue,
-                                              _stage2Completed
-                                                  ? const Color(0xFF22C55E)
-                                                  : (_stage1Completed
-                                                      ? AppTheme.electricBlue
-                                                      : const Color(0xFFCBD5E1)),
+                                              _stage1Completed
+                                                  ? AppTheme.electricBlue
+                                                  : const Color(0xFFCBD5E1),
                                             ],
                                           ),
                                         ),
@@ -324,44 +298,22 @@ class _BookingStagesScreenState extends State<BookingStagesScreen> {
                                           onTap: _openStage1,
                                         ),
 
-                                        const SizedBox(height: 20),
+                                        const SizedBox(height: 24),
 
                                         // ── Stage 2 Node ────────────────────
                                         _buildTimelineStageNode(
                                           stageNum: 2,
-                                          title: 'Program Session',
-                                          subtitle:
-                                              'Configure arm, bowler type & overs',
-                                          summary: _stage2Completed
-                                              ? '6 Overs Configured'
-                                              : null,
-                                          icon: Icons.tune_rounded,
-                                          isCompleted: _stage2Completed,
-                                          isCurrent: _currentStage == 2,
-                                          buttonLabel: _stage2Completed
-                                              ? 'Edit'
-                                              : (_stage1Completed
-                                                  ? 'Configure'
-                                                  : 'Locked'),
-                                          onTap: _openStage2,
-                                        ),
-
-                                        const SizedBox(height: 20),
-
-                                        // ── Stage 3 Node ────────────────────
-                                        _buildTimelineStageNode(
-                                          stageNum: 3,
                                           title: 'Checkout',
                                           subtitle:
                                               'Review booking summary & pay',
                                           summary: null,
                                           icon: Icons.payments_rounded,
                                           isCompleted: false,
-                                          isCurrent: _currentStage == 3,
-                                          buttonLabel: _stage2Completed
+                                          isCurrent: _currentStage == 2,
+                                          buttonLabel: _stage1Completed
                                               ? 'Pay Now'
                                               : 'Locked',
-                                          onTap: _openStage3,
+                                          onTap: _openStage2,
                                         ),
                                       ],
                                     ),
@@ -417,7 +369,7 @@ class _BookingStagesScreenState extends State<BookingStagesScreen> {
                                             ),
                                             SizedBox(height: 2),
                                             Text(
-                                              '3 simple steps to confirm your slot',
+                                              '2 simple steps to confirm your slot',
                                               style: TextStyle(
                                                 fontSize: 11.5,
                                                 color: AppTheme.slateBlue,

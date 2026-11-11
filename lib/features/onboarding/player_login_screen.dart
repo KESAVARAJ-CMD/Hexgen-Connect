@@ -132,7 +132,7 @@ class _PlayerLoginScreenState extends State<PlayerLoginScreen> {
 
                 HexgenButton(
                   text: 'READY. SET. BAT • ENTER ARENA',
-                  icon: Icons.sports_tennis_rounded,
+                  icon: Icons.sports_cricket_rounded,
                   onPressed: _onLogin,
                 ),
               ],

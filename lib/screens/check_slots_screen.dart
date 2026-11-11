@@ -3,7 +3,7 @@ import '../core/network/api_service.dart';
 import '../core/theme/app_theme.dart';
 import '../core/widgets/cyber_glass_backdrop.dart';
 import 'calendar_screen.dart';
-import 'session_config_screen.dart';
+import 'checkout_screen.dart';
 
 class CheckSlotsScreen extends StatefulWidget {
   final String venueId;
@@ -14,25 +14,46 @@ class CheckSlotsScreen extends StatefulWidget {
 }
 
 class _CheckSlotsScreenState extends State<CheckSlotsScreen> {
-  // Selected time slots (Morning 9:00 and 11:00 selected by default as in screenshot)
-  final Set<String> _selectedSlots = {'Morning-9:00', 'Morning-11:00'};
+  // Selected time slots (Morning 11:00 selected by default)
+  final Set<String> _selectedSlots = {'Morning-11:00'};
 
-  // Booked slots list from Live API
-  Set<String> _bookedSlots = {
-    'Morning-6:00',
-    'Morning-8:00',
-    'Afternoon-12:00',
-    'Afternoon-5:00',
-    'Evening-7:00',
-    'Evening-10:00',
-  };
+  // Booked slots list (empty by default)
+  Set<String> _bookedSlots = {};
 
   bool _isLoadingSlots = false;
+
+  late String _selectedDate;
+  late String _selectedDayName;
 
   @override
   void initState() {
     super.initState();
+    _initDynamicDates();
     _fetchLiveSlots();
+  }
+
+  void _initDynamicDates() {
+    final now = DateTime.now();
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+    _selectedDate = '${now.day.toString().padLeft(2, '0')} ${months[now.month - 1]} ${now.year}';
+    _selectedDayName = weekDays[now.weekday - 1];
+  }
+
+  void _openCalendar() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const CalendarScreen(),
+      ),
+    );
+    if (result != null && result is Map<String, dynamic>) {
+      setState(() {
+        _selectedDate = result['startDate'] ?? _selectedDate;
+        _selectedDayName = result['startDayName'] ?? _selectedDayName;
+      });
+    }
   }
 
   Future<void> _fetchLiveSlots() async {
@@ -78,9 +99,17 @@ class _CheckSlotsScreenState extends State<CheckSlotsScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const SessionConfigScreen(),
+        builder: (context) => const CheckoutScreen(),
       ),
     );
+  }
+
+  void _navigateBack() {
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    } else {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -99,17 +128,26 @@ class _CheckSlotsScreenState extends State<CheckSlotsScreen> {
                 child: Row(
                   children: [
                     GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: const Padding(
-                        padding: EdgeInsets.all(4),
-                        child: Icon(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _navigateBack,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppTheme.cardBorderColor,
+                            width: 1.2,
+                          ),
+                        ),
+                        child: const Icon(
                           Icons.arrow_back_ios_rounded,
                           color: AppTheme.navyBlue,
-                          size: 20,
+                          size: 18,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
                     _buildHexgenLogo(),
                     const Spacer(),
                     IconButton(
@@ -198,14 +236,19 @@ class _CheckSlotsScreenState extends State<CheckSlotsScreen> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(
-                            color: const Color(0xFFE0EEFF),
-                            width: 1.5,
+                            color: AppTheme.cardBorderColor,
+                            width: 1.3,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.electricBlue.withAlpha(10),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
+                              color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
+                            ),
+                            BoxShadow(
+                              color: AppTheme.electricBlue.withValues(alpha: 0.04),
+                              blurRadius: 6,
+                              offset: const Offset(0, 1),
                             ),
                           ],
                         ),
@@ -215,47 +258,27 @@ class _CheckSlotsScreenState extends State<CheckSlotsScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  '05 Sep 2025  -  06 Sep 2025',
-                                  style: TextStyle(
-                                    fontSize: 15,
+                                Text(
+                                  _selectedDate,
+                                  style: const TextStyle(
+                                    fontSize: 16,
                                     fontWeight: FontWeight.w900,
                                     color: AppTheme.navyBlue,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: const [
-                                    Text(
-                                      'Friday',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: AppTheme.slateBlue,
-                                      ),
-                                    ),
-                                    SizedBox(width: 38),
-                                    Text(
-                                      'Saturday',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: AppTheme.slateBlue,
-                                      ),
-                                    ),
-                                  ],
+                                const SizedBox(height: 3),
+                                Text(
+                                  _selectedDayName,
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.slateBlue,
+                                  ),
                                 ),
                               ],
                             ),
                             GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const CalendarScreen(),
-                                  ),
-                                );
-                              },
+                              onTap: _openCalendar,
                               child: Container(
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
@@ -282,14 +305,19 @@ class _CheckSlotsScreenState extends State<CheckSlotsScreen> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(22),
                           border: Border.all(
-                            color: const Color(0xFFE0EEFF),
-                            width: 1.5,
+                            color: AppTheme.cardBorderColor,
+                            width: 1.3,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.electricBlue.withAlpha(12),
-                              blurRadius: 16,
-                              offset: const Offset(0, 4),
+                              color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
+                              blurRadius: 18,
+                              offset: const Offset(0, 5),
+                            ),
+                            BoxShadow(
+                              color: AppTheme.electricBlue.withValues(alpha: 0.04),
+                              blurRadius: 6,
+                              offset: const Offset(0, 1),
                             ),
                           ],
                         ),
@@ -379,7 +407,7 @@ class _CheckSlotsScreenState extends State<CheckSlotsScreen> {
 
                             // 3. Evening Section
                             _buildTimePeriodSection(
-                              periodTitle: 'Evening (6:00PM - 12:00AM)',
+                              periodTitle: 'Evening (6:00PM - 11:00PM)',
                               timeSlots: [
                                 '6:00',
                                 '7:00',
@@ -413,9 +441,14 @@ class _CheckSlotsScreenState extends State<CheckSlotsScreen> {
                       gradient: AppTheme.primaryCtaGradient,
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.electricBlue.withAlpha(90),
-                          blurRadius: 20,
+                          color: const Color(0xFF0057FF).withValues(alpha: 0.35),
+                          blurRadius: 18,
                           offset: const Offset(0, 6),
+                        ),
+                        BoxShadow(
+                          color: const Color(0xFF0F2B5C).withValues(alpha: 0.12),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
                         ),
                       ],
                     ),
@@ -484,18 +517,25 @@ class _CheckSlotsScreenState extends State<CheckSlotsScreen> {
                       : Border.all(
                           color: isBooked
                               ? Colors.transparent
-                              : const Color(0xFFE2EEFF),
+                              : AppTheme.cardBorderColor,
                           width: 1.2,
                         ),
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: AppTheme.electricBlue.withAlpha(70),
-                            blurRadius: 10,
+                            color: AppTheme.electricBlue.withValues(alpha: 0.35),
+                            blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
                         ]
-                      : [],
+                      : [
+                          if (!isBooked)
+                            BoxShadow(
+                              color: const Color(0xFF0F2B5C).withValues(alpha: 0.04),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                        ],
                 ),
                 child: Center(
                   child: Text(

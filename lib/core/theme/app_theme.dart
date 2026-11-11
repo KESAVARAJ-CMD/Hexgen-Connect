@@ -12,8 +12,12 @@ class AppTheme {
   static const Color pureWhite = Color(0xFFFFFFFF);    // Cards, white text
   static const Color navyBlue = Color(0xFF102A63);     // Headings, primary text
   static const Color slateBlue = Color(0xFF647899);    // Descriptions, secondary text
-  static const Color cardBorderColor = Color(0xFFE2E8F0); // Mild Grey Border
+  static const Color cardBorderColor = Color(0xFFD6E4F8); // Clean Crisp Border for High Contrast
   static const Color dotUnselected = Color(0xFFB9D5F0);  // Unselected pagination
+
+  // Global App Background Pattern Image URL
+  static const String bgPatternUrl =
+      'https://i.pinimg.com/736x/14/9f/fa/149ffade1b6a54d7e13032f46c865cf1.jpg';
 
   // Backward-compatible aliases
   static const Color primaryBlueStart = electricBlue;

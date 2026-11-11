@@ -110,7 +110,7 @@ class HexgenButton extends StatelessWidget {
       width: isFullWidth ? double.infinity : null,
       decoration: BoxDecoration(
         gradient: isEnabled
-            ? HexgenColors.primaryGradient
+            ? AppTheme.primaryCtaGradient
             : const LinearGradient(
                 colors: [Color(0xFFCBD5E1), Color(0xFF94A3B8)],
               ),
@@ -118,9 +118,14 @@ class HexgenButton extends StatelessWidget {
         boxShadow: isEnabled
             ? [
                 BoxShadow(
-                  color: AppTheme.navyBlue.withValues(alpha: 0.08),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  color: AppTheme.electricBlue.withValues(alpha: 0.35),
+                  blurRadius: 16,
+                  offset: const Offset(0, 5),
+                ),
+                BoxShadow(
+                  color: const Color(0xFF0F2B5C).withValues(alpha: 0.10),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
                 ),
               ]
             : null,

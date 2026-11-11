@@ -3,10 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/cyber_glass_backdrop.dart';
-import '../../widgets/session_setup_dialog.dart';
 import '../profile/profile_screen.dart';
 import '../profile/settings_screen.dart';
-import '../live_analysis_screen.dart';
 import 'tabs/booking_tab.dart';
 import 'tabs/coaches_tab.dart';
 import 'tabs/sessions_tab.dart';
@@ -73,26 +71,6 @@ class _PlayerDashboardScreenState extends State<PlayerDashboardScreen> {
     );
   }
 
-  void _openCenterBallDialog() async {
-    final result = await SessionSetupDialog.show(context);
-    if (result != null && mounted) {
-      final sessionCompleted = await Navigator.push<bool>(
-        context,
-        MaterialPageRoute(
-          builder: (context) => LiveAnalysisScreen(
-            mode: AnalysisMode.biomechanics,
-            sessionConfig: result,
-            playerName: _currentName,
-          ),
-        ),
-      );
-
-      if (sessionCompleted == true && mounted) {
-        _navigateToTab(1); // Jump to Sessions Tab to view telemetry!
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
@@ -150,30 +128,16 @@ class _PlayerDashboardScreenState extends State<PlayerDashboardScreen> {
           ),
           const Spacer(),
           IconButton(
-            tooltip: 'Live Calibration & Launch',
-            icon: const Icon(Icons.bolt_rounded, color: AppTheme.electricBlue),
-            onPressed: _openCenterBallDialog,
-          ),
-          IconButton(
-            tooltip: 'Athlete Dossier',
-            icon: CircleAvatar(
-              radius: 17,
-              backgroundColor: AppTheme.electricBlue,
-              child: Text(
-                _currentName.isNotEmpty
-                    ? _currentName[0].toUpperCase()
-                    : 'P',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                  fontFamily: 'Roboto',
-                ),
-              ),
-            ),
+            tooltip: 'Notifications',
+            icon: const Icon(Icons.notifications_outlined, color: AppTheme.navyBlue),
             onPressed: () {
-              _refreshProfile();
-              _navigateToTab(3);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('No new notifications'),
+                  behavior: SnackBarBehavior.floating,
+                  duration: Duration(seconds: 2),
+                ),
+              );
             },
           ),
           IconButton(
@@ -205,15 +169,15 @@ class _PlayerDashboardScreenState extends State<PlayerDashboardScreen> {
             filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.65),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(28),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.85),
+                  color: const Color(0xFFD6E4F8),
                   width: 1.2,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF1C3E78).withValues(alpha: 0.08),
+                    color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
                     blurRadius: 18,
                     offset: const Offset(0, 4),
                   ),

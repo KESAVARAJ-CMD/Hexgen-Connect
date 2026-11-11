@@ -12,6 +12,8 @@ class VenueDetailsScreen extends StatefulWidget {
 }
 
 class _VenueDetailsScreenState extends State<VenueDetailsScreen> {
+  String _selectedSport = 'Cricket';
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -318,8 +320,8 @@ class _VenueDetailsScreenState extends State<VenueDetailsScreen> {
                               ),
                               const SizedBox(width: 12),
                               _buildSportCard(
-                                icon: Icons.sports_basketball,
-                                label: 'Basketball',
+                                icon: Icons.sports_baseball_rounded,
+                                label: 'Pickleball',
                               ),
                             ],
                           ),
@@ -379,9 +381,11 @@ class _VenueDetailsScreenState extends State<VenueDetailsScreen> {
                           const SizedBox(height: 12),
 
                           _buildAboutCard(
-                            title: 'Football',
+                            title: 'Pickleball Courts',
                             points: [
-                              'Wearing football cleats while playing at the facility is recommended but not compulsory. Metal cleats are not allowed.',
+                              'Non-marking indoor court shoes are mandatory to protect the cushion turf.',
+                              'Paddles and USAPA approved balls available at the front desk.',
+                              'A maximum of 4 players per court allowed for doubles play.',
                             ],
                           ),
                           const SizedBox(height: 12),
@@ -419,7 +423,9 @@ class _VenueDetailsScreenState extends State<VenueDetailsScreen> {
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (context) => const BookingStagesScreen(),
+                            builder: (context) => BookingStagesScreen(
+                              selectedSport: _selectedSport,
+                            ),
                           ),
                         );
                       },
@@ -431,9 +437,14 @@ class _VenueDetailsScreenState extends State<VenueDetailsScreen> {
                           gradient: AppTheme.primaryCtaGradient,
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.electricBlue.withAlpha(90),
-                              blurRadius: 20,
+                              color: const Color(0xFF0057FF).withValues(alpha: 0.35),
+                              blurRadius: 18,
                               offset: const Offset(0, 6),
+                            ),
+                            BoxShadow(
+                              color: const Color(0xFF0F2B5C).withValues(alpha: 0.12),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
                             ),
                           ],
                         ),
@@ -458,41 +469,73 @@ class _VenueDetailsScreenState extends State<VenueDetailsScreen> {
         );
   }
 
-  static Widget _buildSportCard({
+  Widget _buildSportCard({
     required IconData icon,
     required String label,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppTheme.cardBorderColor,
-          width: 1.2,
+    final isSelected = _selectedSport == label;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedSport = label;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: isSelected ? AppTheme.primaryCtaGradient : null,
+          color: isSelected ? null : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: isSelected
+              ? null
+              : Border.all(
+                  color: AppTheme.cardBorderColor,
+                  width: 1.2,
+                ),
+          boxShadow: [
+            if (isSelected)
+              BoxShadow(
+                color: const Color(0xFF0057FF).withValues(alpha: 0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              )
+            else
+              BoxShadow(
+                color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+          ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.electricBlue.withAlpha(10),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: AppTheme.electricBlue, size: 20),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.navyBlue,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : AppTheme.electricBlue,
+              size: 20,
             ),
-          ),
-        ],
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.bold,
+                color: isSelected ? Colors.white : AppTheme.navyBlue,
+              ),
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 6),
+              const Icon(
+                Icons.check_circle_rounded,
+                color: Colors.white,
+                size: 16,
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -512,9 +555,14 @@ class _VenueDetailsScreenState extends State<VenueDetailsScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.electricBlue.withAlpha(10),
-            blurRadius: 10,
+            color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
+            blurRadius: 12,
             offset: const Offset(0, 3),
+          ),
+          BoxShadow(
+            color: AppTheme.electricBlue.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
           ),
         ],
       ),

@@ -235,11 +235,12 @@ class BookingSuccessScreen extends StatelessWidget {
                     height: 52,
                     borderRadius: 16,
                     onPressed: () {
-                      Navigator.pushReplacement(
+                      Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const MyBookingsScreen(),
+                          builder: (context) => const MyBookingsScreen(returnToDashboard: true),
                         ),
+                        (route) => false,
                       );
                     },
                   ),

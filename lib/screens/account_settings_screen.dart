@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/network/api_service.dart';
 import '../core/theme/app_theme.dart';
 import '../core/widgets/cyber_controls.dart';
+import '../core/widgets/cyber_glass_backdrop.dart';
 import '../core/widgets/hexgen_badge.dart';
 import '../core/widgets/hexgen_button.dart';
 import '../widgets/animated_bottom_nav_bar.dart';
@@ -58,11 +59,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.iceBlue,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
-        ),
+      backgroundColor: Colors.transparent,
+      body: CyberGlassBackdrop(
         child: Stack(
           children: [
             // ── Background Ambient Curves ────────────────────────────────────
@@ -353,8 +351,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                   label: 'Connect',
                 ),
                 AnimatedNavBarItem(
-                  icon: Icons.sports_soccer_outlined,
-                  activeIcon: Icons.sports_soccer_rounded,
+                  icon: Icons.sports_cricket_outlined,
+                  activeIcon: Icons.sports_cricket_rounded,
                   label: 'Session',
                 ),
               ],

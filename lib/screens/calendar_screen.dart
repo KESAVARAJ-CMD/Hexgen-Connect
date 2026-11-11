@@ -11,9 +11,10 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
-  int _selectedStartDay = 5;
-  int _selectedEndDay = 6;
-  int _currentMonthIndex = 8; // September
+  late DateTime _currentDate;
+  late int _selectedDay;
+  late int _currentMonth;
+  late int _currentYear;
 
   final List<String> _months = [
     'January',
@@ -24,37 +25,86 @@ class _CalendarScreenState extends State<CalendarScreen> {
     'June',
     'July',
     'August',
-    'September 2025',
-    'October 2025',
-    'November 2025',
-    'December 2025',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
 
-  final Set<int> _highlightedDays = {18, 23, 28}; // Light blue halo days
+  @override
+  void initState() {
+    super.initState();
+    _currentDate = DateTime.now();
+    _selectedDay = _currentDate.day;
+    _currentMonth = _currentDate.month;
+    _currentYear = _currentDate.year;
+  }
 
   void _onDateTap(int day) {
     setState(() {
-      if (_selectedStartDay == day) return;
-      if (day > _selectedStartDay) {
-        _selectedEndDay = day;
-      } else {
-        _selectedStartDay = day;
-        _selectedEndDay = day + 1;
-      }
+      _selectedDay = day;
     });
   }
 
   void _onContinue() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const CheckSlotsScreen(),
-      ),
-    );
+    final monthsShort = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    final weekDays = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
+    ];
+    final weekDaysShort = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    final selectedDateObj =
+        DateTime(_currentYear, _currentMonth, _selectedDay);
+    final dayStr = _selectedDay.toString().padLeft(2, '0');
+    final monthStr = monthsShort[_currentMonth - 1];
+
+    final formattedDate = '$dayStr $monthStr $_currentYear';
+    final fullDayName = weekDays[selectedDateObj.weekday - 1];
+    final shortDayName = weekDaysShort[selectedDateObj.weekday - 1];
+
+    final resultData = {
+      'startDate': formattedDate,
+      'startDayName': fullDayName,
+      'shortDayName': shortDayName,
+    };
+
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context, resultData);
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const CheckSlotsScreen(),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final firstDayOfMonth = DateTime(_currentYear, _currentMonth, 1);
+    final daysInMonth = DateUtils.getDaysInMonth(_currentYear, _currentMonth);
+    final emptyOffset = firstDayOfMonth.weekday % 7; // Sunday = 0
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: CyberGlassBackdrop(
@@ -63,23 +113,39 @@ class _CalendarScreenState extends State<CalendarScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // ── Top Bar: Back < | Hexgen Logo (Left Aligned) | Filter Funnel ─────────────────
+              // ── Top Bar ──────────────────────────────────────────────────
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 child: Row(
                   children: [
                     GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: const Padding(
-                        padding: EdgeInsets.all(4),
-                        child: Icon(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        if (Navigator.canPop(context)) {
+                          Navigator.pop(context);
+                        } else {
+                          Navigator.of(context).pop();
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppTheme.cardBorderColor,
+                            width: 1.2,
+                          ),
+                        ),
+                        child: const Icon(
                           Icons.arrow_back_ios_rounded,
                           color: AppTheme.navyBlue,
-                          size: 20,
+                          size: 18,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
                     _buildHexgenLogo(),
                     const Spacer(),
                     IconButton(
@@ -97,7 +163,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
               // ── Scrollable Body ──────────────────────────────────────────────
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -175,14 +242,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(22),
                           border: Border.all(
-                            color: const Color(0xFFE0EEFF),
-                            width: 1.5,
+                            color: AppTheme.cardBorderColor,
+                            width: 1.3,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.electricBlue.withAlpha(12),
-                              blurRadius: 16,
-                              offset: const Offset(0, 4),
+                              color: const Color(0xFF0F2B5C)
+                                  .withValues(alpha: 0.08),
+                              blurRadius: 18,
+                              offset: const Offset(0, 5),
+                            ),
+                            BoxShadow(
+                              color:
+                                  AppTheme.electricBlue.withValues(alpha: 0.04),
+                              blurRadius: 6,
+                              offset: const Offset(0, 1),
                             ),
                           ],
                         ),
@@ -192,23 +266,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      _months[_currentMonthIndex],
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w900,
-                                        color: AppTheme.navyBlue,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    const Icon(
-                                      Icons.arrow_drop_down_rounded,
-                                      color: AppTheme.navyBlue,
-                                      size: 22,
-                                    ),
-                                  ],
+                                Text(
+                                  '${_months[_currentMonth - 1]} $_currentYear',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                    color: AppTheme.navyBlue,
+                                  ),
                                 ),
                                 Row(
                                   children: [
@@ -219,9 +283,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                         size: 24,
                                       ),
                                       onPressed: () {
-                                        if (_currentMonthIndex > 0) {
-                                          setState(() => _currentMonthIndex--);
-                                        }
+                                        setState(() {
+                                          if (_currentMonth > 1) {
+                                            _currentMonth--;
+                                          } else {
+                                            _currentMonth = 12;
+                                            _currentYear--;
+                                          }
+                                        });
                                       },
                                     ),
                                     IconButton(
@@ -231,10 +300,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                         size: 24,
                                       ),
                                       onPressed: () {
-                                        if (_currentMonthIndex <
-                                            _months.length - 1) {
-                                          setState(() => _currentMonthIndex++);
-                                        }
+                                        setState(() {
+                                          if (_currentMonth < 12) {
+                                            _currentMonth++;
+                                          } else {
+                                            _currentMonth = 1;
+                                            _currentYear++;
+                                          }
+                                        });
                                       },
                                     ),
                                   ],
@@ -260,7 +333,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
                             const SizedBox(height: 12),
 
-                            // Calendar Grid (30 Days for Sept)
+                            // Calendar Grid
                             GridView.builder(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
@@ -270,18 +343,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                 mainAxisSpacing: 10,
                                 crossAxisSpacing: 8,
                               ),
-                              itemCount: 35, // 1 empty slot + 30 days
+                              itemCount: emptyOffset + daysInMonth,
                               itemBuilder: (context, index) {
-                                if (index < 1) {
-                                  return const SizedBox(); // Sept 1 starts on Mon
+                                if (index < emptyOffset) {
+                                  return const SizedBox();
                                 }
-                                final day = index;
-                                if (day > 30) return const SizedBox();
-
-                                final isSelected = day == _selectedStartDay ||
-                                    day == _selectedEndDay;
-                                final isHighlighted =
-                                    _highlightedDays.contains(day);
+                                final day = index - emptyOffset + 1;
+                                final isSelected = day == _selectedDay;
 
                                 return GestureDetector(
                                   onTap: () => _onDateTap(day),
@@ -296,15 +364,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                             : null,
                                         color: isSelected
                                             ? null
-                                            : isHighlighted
-                                                ? const Color(0xFFE0EEFF)
-                                                : Colors.transparent,
-                                        border: isHighlighted
-                                            ? Border.all(
-                                                color: const Color(0xFF38BDF8),
-                                                width: 1.5,
-                                              )
-                                            : null,
+                                            : Colors.transparent,
                                         boxShadow: isSelected
                                             ? [
                                                 BoxShadow(
@@ -321,7 +381,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                           '$day',
                                           style: TextStyle(
                                             fontSize: 13.5,
-                                            fontWeight: isSelected || isHighlighted
+                                            fontWeight: isSelected
                                                 ? FontWeight.w900
                                                 : FontWeight.w600,
                                             color: isSelected
@@ -341,117 +401,72 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
                       const SizedBox(height: 18),
 
-                      // ── Date Range Selected Cards Row ────────────────────────
-                      Row(
-                        children: [
-                          // From Date
-                          Expanded(
-                            child: Container(
+                      // ── Selected Date Single Card ────────────────────────────
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0F7FF),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppTheme.electricBlue,
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color:
+                                  AppTheme.electricBlue.withValues(alpha: 0.08),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Selected Date',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.electricBlue,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${_selectedDay.toString().padLeft(2, '0')} ${_months[_currentMonth - 1].substring(0, 3)} $_currentYear',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                    color: AppTheme.navyBlue,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 12,
-                              ),
+                                  horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF0F7FF),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: AppTheme.electricBlue,
-                                  width: 1.5,
+                                color: AppTheme.electricBlue,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][DateTime(_currentYear, _currentMonth, _selectedDay).weekday - 1],
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
                                 ),
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'From date',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTheme.electricBlue,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        '0$_selectedStartDay Sep 2025',
-                                        style: const TextStyle(
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w900,
-                                          color: AppTheme.navyBlue,
-                                        ),
-                                      ),
-                                      const Text(
-                                        'Fri',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: AppTheme.slateBlue,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
                             ),
-                          ),
-
-                          const SizedBox(width: 12),
-
-                          // To Date
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: const Color(0xFFE0EEFF),
-                                  width: 1.5,
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'To date',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTheme.electricBlue,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        '0$_selectedEndDay Sep 2025',
-                                        style: const TextStyle(
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w900,
-                                          color: AppTheme.navyBlue,
-                                        ),
-                                      ),
-                                      const Text(
-                                        'Sat',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: AppTheme.slateBlue,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
 
                       const SizedBox(height: 24),
@@ -473,9 +488,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       gradient: AppTheme.primaryCtaGradient,
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.electricBlue.withAlpha(90),
-                          blurRadius: 20,
+                          color:
+                              const Color(0xFF0057FF).withValues(alpha: 0.35),
+                          blurRadius: 18,
                           offset: const Offset(0, 6),
+                        ),
+                        BoxShadow(
+                          color:
+                              const Color(0xFF0F2B5C).withValues(alpha: 0.12),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
                         ),
                       ],
                     ),
@@ -517,19 +539,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
 class _CalendarDayName extends StatelessWidget {
   final String dayName;
+
   const _CalendarDayName(this.dayName);
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: 38,
-      child: Text(
-        dayName,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: AppTheme.slateBlue,
+      child: Center(
+        child: Text(
+          dayName,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.slateBlue,
+          ),
         ),
       ),
     );

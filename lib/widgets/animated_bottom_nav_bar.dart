@@ -38,16 +38,16 @@ class AnimatedBottomNavBar extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(32),
-          border: Border.all(color: AppTheme.cardBorderColor, width: 1.2),
+          border: Border.all(color: const Color(0xFFD6E4F8), width: 1.4),
           boxShadow: [
             BoxShadow(
-              color: AppTheme.navyBlue.withAlpha(20),
-              blurRadius: 18,
+              color: const Color(0xFF0F2B5C).withValues(alpha: 0.10),
+              blurRadius: 20,
               offset: const Offset(0, 6),
             ),
             BoxShadow(
-              color: AppTheme.electricBlue.withAlpha(20),
-              blurRadius: 8,
+              color: AppTheme.electricBlue.withValues(alpha: 0.08),
+              blurRadius: 10,
               offset: const Offset(0, 2),
             ),
           ],

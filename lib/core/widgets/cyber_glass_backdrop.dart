@@ -1,108 +1,80 @@
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
-/// Reusable Cyber Glassmorphic Backdrop providing the radial gradient,
-/// subtle ambient cyber pattern, and glowing blurred cyan/blue light orbs.
+/// Backdrop providing a clean ice-blue foundation with minimal top and bottom
+/// blue cloud effects and ambient atmospheric glow.
 class CyberGlassBackdrop extends StatelessWidget {
   final Widget child;
   final bool showOrbs;
   final bool showPattern;
 
-  static const String bgPatternUrl =
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuAdOdv4w8HJWhCfumwKzqU2omAHxpNWqqFdfDDPm74pdBwmpZJVjLcqiT-YtGmRxGIbhruVNdqHqxmPBmsUTUrQiWTlKeKuR8dXXF4FEl6A2P5rhjl9sU1S0A9DNNC7XeF3AkQRbtaJCSaaUPn54vdJ-lTYCzXZqamQ8zB5BaLeozqkAnwBReA2P4ipcukVOpQf2S8w6c42lTlKvwbBbAXRb3ViZiobzFzx0NsxHtzZife0qivtGH67';
+  static const String bgPatternUrl = AppTheme.bgPatternUrl;
 
   const CyberGlassBackdrop({
     super.key,
     required this.child,
-    this.showOrbs = true,
+    this.showOrbs = false,
     this.showPattern = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return Stack(
+      fit: StackFit.expand,
       children: [
-        // ── 1. Crisp Background Image Backdrop with Radial Gradient ────────
+        // ── 1. Full-Screen Blue Gradient Base Foundation ─────────────────────
         Positioned.fill(
           child: Container(
-            decoration: BoxDecoration(
-              gradient: RadialGradient(
-                center: const Alignment(-0.80, -0.90),
-                radius: 0.95,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
                 colors: [
-                  const Color(0xFF0066FF).withValues(alpha: 0.25),
-                  const Color(0xFFE2EDFF).withValues(alpha: 0.85),
-                  const Color(0xFFF3F7FF),
+                  Color(0xFFCEE5FD), // Rich Sky Blue (Top)
+                  Color(0xFFE2F0FE), // Ambient Soft Cyan Blue
+                  Color(0xFFEFF7FF), // Crisp Ice Blue (Center)
+                  Color(0xFFD4E9FD), // Electric Blue Atmospheric Tint (Bottom)
                 ],
+                stops: [0.0, 0.32, 0.68, 1.0],
               ),
             ),
-            child: showPattern
-                ? Image.network(
-                    bgPatternUrl,
-                    fit: BoxFit.cover,
-                    alignment: Alignment.center,
-                    errorBuilder: (context, error, stackTrace) =>
-                        const SizedBox.shrink(),
-                  )
-                : null,
           ),
         ),
 
-        // ── 2. Glowing Ambient Orbs ──────────────────────────────────────────
-        if (showOrbs) ...[
-          // Cyber Cyan Glow Overlay (Top Right)
-          Positioned(
-            top: -50,
-            right: -50,
-            child: ImageFiltered(
-              imageFilter: ui.ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-              child: Container(
-                width: 260,
-                height: 260,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF0099FF).withValues(alpha: 0.28),
+        // ── 2. Full-Screen Cloud Effect ─────────────────────────────────────
+        if (showPattern)
+          Positioned.fill(
+            child: Image.network(
+              bgPatternUrl,
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+              errorBuilder: (context, error, stackTrace) =>
+                  const SizedBox.shrink(),
+            ),
+          ),
+
+        // ── 3. Full-Screen Blue Gradient & Light Atmosphere Overlay ──────────
+        Positioned.fill(
+          child: IgnorePointer(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0xFF0077FF).withValues(alpha: 0.14),
+                    const Color(0xFF00B4D8).withValues(alpha: 0.05),
+                    Colors.transparent,
+                    const Color(0xFF0052FF).withValues(alpha: 0.12),
+                  ],
+                  stops: const [0.0, 0.25, 0.65, 1.0],
                 ),
               ),
             ),
           ),
+        ),
 
-          // Cyber Cyan Glow Overlay (Bottom Right)
-          Positioned(
-            bottom: -50,
-            right: -50,
-            child: ImageFiltered(
-              imageFilter: ui.ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-              child: Container(
-                width: 260,
-                height: 260,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF0099FF).withValues(alpha: 0.28),
-                ),
-              ),
-            ),
-          ),
-
-          // Cyber Blue Glow Overlay (Bottom Left)
-          Positioned(
-            bottom: -50,
-            left: -50,
-            child: ImageFiltered(
-              imageFilter: ui.ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-              child: Container(
-                width: 260,
-                height: 260,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF0066FF).withValues(alpha: 0.28),
-                ),
-              ),
-            ),
-          ),
-        ],
-
-        // ── 3. Foreground Content ────────────────────────────────────────────
+        // ── 4. Foreground Content ────────────────────────────────────────────
         Positioned.fill(
           child: child,
         ),
@@ -144,28 +116,30 @@ class CyberGlassCard extends StatelessWidget {
 
     Widget content = ClipRRect(
       borderRadius: effectiveBorderRadius,
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: color ?? Colors.white.withValues(alpha: 0.60),
-            borderRadius: effectiveBorderRadius,
-            border: Border.all(
-              color: borderColor ?? Colors.white.withValues(alpha: 0.85),
-              width: borderWidth,
-            ),
-            boxShadow: boxShadow ??
-                [
-                  BoxShadow(
-                    color: const Color(0xFF1C3E78).withValues(alpha: 0.08),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
+      child: Container(
+        padding: padding,
+        decoration: BoxDecoration(
+          color: color ?? Colors.white,
+          borderRadius: effectiveBorderRadius,
+          border: Border.all(
+            color: borderColor ?? const Color(0xFFD6E4F8),
+            width: borderWidth,
           ),
-          child: child,
+          boxShadow: boxShadow ??
+              [
+                BoxShadow(
+                  color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+                BoxShadow(
+                  color: const Color(0xFF0057FF).withValues(alpha: 0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
         ),
+        child: child,
       ),
     );
 

@@ -240,24 +240,20 @@ class _ContinueWithScreenState extends State<ContinueWithScreen> {
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.65),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 1.2),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF1C3E78).withValues(alpha: 0.08),
-                  blurRadius: 18,
-                  offset: const Offset(0, 5),
-                ),
-              ],
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFD6E4F8), width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
             ),
+          ],
+        ),
             child: Row(
               children: [
                 Container(
@@ -300,8 +296,6 @@ class _ContinueWithScreenState extends State<ContinueWithScreen> {
               ],
             ),
           ),
-        ),
-      ),
-    );
+        );
   }
 }

@@ -125,12 +125,12 @@ class _SessionsTabState extends State<SessionsTab> {
                   height: 46,
                   padding: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.65),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(23),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 1.2),
+                    border: Border.all(color: const Color(0xFFD6E4F8), width: 1.2),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF1C3E78).withValues(alpha: 0.06),
+                        color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
                         blurRadius: 10,
                         offset: const Offset(0, 3),
                       ),

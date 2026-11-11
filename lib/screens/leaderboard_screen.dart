@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
+import '../core/widgets/cyber_glass_backdrop.dart';
 import '../core/widgets/hexgen_badge.dart';
 import '../core/widgets/hexgen_card.dart';
 
@@ -14,7 +15,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   int _selectedTimeframe = 0; // 0: Weekly, 1: Monthly, 2: All Time
   String _selectedSport = 'Cricket';
 
-  final List<String> _sports = ['Cricket', 'Pickleball', 'Badminton', 'Tennis'];
+  final List<String> _sports = ['Cricket', 'Pickleball'];
 
   final List<Map<String, dynamic>> _topAthletes = [
     {
@@ -115,64 +116,92 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     final remainingAthletes = _topAthletes.sublist(3);
 
     return Scaffold(
-      backgroundColor: AppTheme.iceBlue,
-      appBar: AppBar(
-        backgroundColor: AppTheme.iceBlue,
-        elevation: 0,
-        centerTitle: false,
-        title: const Text(
-          'ARENA LEADERBOARD',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w900,
-            color: AppTheme.navyBlue,
-            letterSpacing: 0.6,
-            fontFamily: 'Roboto',
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.navyBlue, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          // Sport Selector Dropdown Pill
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppTheme.pureWhite,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.cardBorderColor),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _selectedSport,
-                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.navyBlue, size: 18),
-                isDense: true,
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.navyBlue,
-                  fontFamily: 'Roboto',
+      backgroundColor: Colors.transparent,
+      body: CyberGlassBackdrop(
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Top Bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppTheme.cardBorderColor,
+                            width: 1.2,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.arrow_back_ios_rounded,
+                          color: AppTheme.navyBlue,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'ARENA LEADERBOARD',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        color: AppTheme.navyBlue,
+                        letterSpacing: 0.6,
+                        fontFamily: 'Roboto',
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.pureWhite,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFD6E4F8)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedSport,
+                          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.navyBlue, size: 18),
+                          isDense: true,
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.navyBlue,
+                            fontFamily: 'Roboto',
+                          ),
+                          items: _sports.map((sport) {
+                            return DropdownMenuItem(
+                              value: sport,
+                              child: Text(sport),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) setState(() => _selectedSport = val);
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                items: _sports.map((sport) {
-                  return DropdownMenuItem(
-                    value: sport,
-                    child: Text(sport),
-                  );
-                }).toList(),
-                onChanged: (val) {
-                  if (val != null) setState(() => _selectedSport = val);
-                },
               ),
-            ),
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          // ── Scrollable Body ──────────────────────────────────────────────
-          ListView(
+              Expanded(
+                child: Stack(
+                  children: [
+                    // ── Scrollable Body ──────────────────────────────────────────────
+                    ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
             children: [
               // 1. Timeframe Filter Selector
@@ -379,8 +408,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  ],
+),
+),
+),
+);
+}
 
   Widget _buildTimeTab(int index, String label) {
     final isSelected = _selectedTimeframe == index;

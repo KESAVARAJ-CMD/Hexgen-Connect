@@ -5,11 +5,20 @@ import '../core/theme/app_theme.dart';
 import '../core/widgets/hexgen_badge.dart';
 import '../core/widgets/hexgen_button.dart';
 import '../core/widgets/hexgen_card.dart';
+import '../core/widgets/cyber_glass_backdrop.dart';
+import '../features/dashboard/player_dashboard_screen.dart';
+import 'session_config_screen.dart';
 import 'venue_details_screen.dart';
 
 class MyBookingsScreen extends StatefulWidget {
   final int initialTab; // 0: Upcoming, 1: Past
-  const MyBookingsScreen({super.key, this.initialTab = 0});
+  final bool returnToDashboard;
+
+  const MyBookingsScreen({
+    super.key,
+    this.initialTab = 0,
+    this.returnToDashboard = false,
+  });
 
   @override
   State<MyBookingsScreen> createState() => _MyBookingsScreenState();
@@ -30,135 +39,49 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     setState(() => _isLoading = true);
     final bookings = await ApiService().getMyBookings();
     if (!mounted) return;
-    if (bookings.isNotEmpty) {
-      final upcoming = <Map<String, dynamic>>[];
-      final past = <Map<String, dynamic>>[];
+    
+    final upcoming = <Map<String, dynamic>>[];
+    final past = <Map<String, dynamic>>[];
 
-      for (final b in bookings) {
-        final status = (b['status'] ?? 'CONFIRMED').toString().toUpperCase();
-        final mappedItem = {
-          'id': b['bookingId'] ?? b['id'] ?? 'HEX-BK',
-          'venue': b['venueName'] ?? b['venue'] ?? 'Hexgen Sports Arena',
-          'lane': b['lane'] ?? 'Right-Hand Lane 1 • Synthetic Turf',
-          'location': b['location'] ?? 'Shanthinagar, Bangalore',
-          'date': b['date'] ?? 'Upcoming',
-          'time': (b['timeSlots'] is List) ? (b['timeSlots'] as List).join(', ') : (b['time'] ?? '09:00 AM - 10:00 AM'),
-          'sport': b['sport'] ?? 'Cricket',
-          'status': status,
-          'badgeVariant': status == 'COMPLETED' ? HexgenBadgeVariant.primary : HexgenBadgeVariant.volt,
-          'price': '₹ ${b['totalAmount'] ?? 1830}',
-          'bowlerConfig': b['bowlerConfig'] ?? '120 km/h • Fast Seam • 6 Overs',
-          'tracking': b['tracking'] ?? '60fps AI Pose Calibration',
-          'coach': b['coach'] ?? 'Coach Madhu (Assigned)',
-          'entryGate': b['entryGate'] ?? 'Gate B • Lane Turnstile 01',
-        };
+    for (final b in bookings) {
+      final status = (b['status'] ?? 'CONFIRMED').toString().toUpperCase();
+      final mappedItem = {
+        'id': b['bookingId'] ?? b['id'] ?? 'HEX-BK',
+        'venue': b['venueName'] ?? b['venue'] ?? 'Hexgen Sports Arena',
+        'lane': b['lane'] ?? 'Right-Hand Lane 1 • Synthetic Turf',
+        'location': b['location'] ?? 'Shanthinagar, Bangalore',
+        'date': b['date'] ?? 'Upcoming',
+        'time': (b['timeSlots'] is List) ? (b['timeSlots'] as List).join(', ') : (b['time'] ?? '09:00 AM - 10:00 AM'),
+        'sport': b['sport'] ?? 'Cricket',
+        'status': status,
+        'badgeVariant': status == 'COMPLETED'
+            ? HexgenBadgeVariant.primary
+            : (status == 'CANCELLED' ? HexgenBadgeVariant.gold : HexgenBadgeVariant.volt),
+        'price': (b['totalAmount'] != null) ? '₹ ${b['totalAmount']}' : (b['price'] ?? '₹ 1,830'),
+        'bowlerConfig': b['bowlerConfig'] ?? '120 km/h • Fast Seam • 6 Overs',
+        'tracking': b['tracking'] ?? '60fps AI Pose Calibration',
+        'coach': b['coach'] ?? 'Coach Madhu (Assigned)',
+        'entryGate': b['entryGate'] ?? 'Gate B • Lane Turnstile 01',
+      };
 
-        if (status == 'COMPLETED' || status == 'CANCELLED') {
-          past.add(mappedItem);
-        } else {
-          upcoming.add(mappedItem);
-        }
+      if (status == 'COMPLETED' || status == 'CANCELLED') {
+        past.add(mappedItem);
+      } else {
+        upcoming.add(mappedItem);
       }
-
-      setState(() {
-        _upcomingBookings.clear();
-        _upcomingBookings.addAll(upcoming);
-        if (past.isNotEmpty) {
-          _pastBookings.clear();
-          _pastBookings.addAll(past);
-        }
-        _isLoading = false;
-      });
-    } else {
-      setState(() => _isLoading = false);
     }
+
+    setState(() {
+      _upcomingBookings.clear();
+      _upcomingBookings.addAll(upcoming);
+      _pastBookings.clear();
+      _pastBookings.addAll(past);
+      _isLoading = false;
+    });
   }
 
-  final List<Map<String, dynamic>> _upcomingBookings = [
-    {
-      'id': 'HEX-BK77492',
-      'venue': 'Hexgen Sports Arena',
-      'lane': 'Right-Hand Lane 1 • Synthetic Turf',
-      'location': 'Shanthinagar, Bangalore',
-      'date': 'Tomorrow • 23 Sep 2025',
-      'time': '09:00 AM - 10:00 AM',
-      'sport': 'Cricket',
-      'status': 'CONFIRMED',
-      'badgeVariant': HexgenBadgeVariant.volt,
-      'price': '₹ 1,830',
-      'bowlerConfig': '120 km/h • Fast Seam • 6 Overs',
-      'tracking': '60fps AI Pose Calibration',
-      'coach': 'Coach Madhu (Assigned)',
-      'entryGate': 'Gate B • Lane Turnstile 01',
-    },
-    {
-      'id': 'HEX-BK77510',
-      'venue': 'Hexgen Turf Arena',
-      'lane': 'Court 2 • Hybrid Indoor Turf',
-      'location': 'Indiranagar, Bangalore',
-      'date': '26 Sep 2025',
-      'time': '07:00 AM - 08:30 AM',
-      'sport': 'Cricket',
-      'status': 'CONFIRMED',
-      'badgeVariant': HexgenBadgeVariant.volt,
-      'price': '₹ 2,450',
-      'bowlerConfig': '105 km/h • In-Swinger • 10 Overs',
-      'tracking': 'Dual Camera 4K Replay',
-      'coach': 'Autonomous AI Machine Sync',
-      'entryGate': 'Gate A • Main Deck',
-    },
-  ];
-
-  final List<Map<String, dynamic>> _pastBookings = [
-    {
-      'id': 'HEX-BK76104',
-      'venue': 'Hexgen Sports Arena',
-      'lane': 'Right-Hand Lane 3',
-      'location': 'Shanthinagar, Bangalore',
-      'date': '15 Sep 2025',
-      'time': '06:00 PM - 07:00 PM',
-      'sport': 'Cricket',
-      'status': 'COMPLETED',
-      'badgeVariant': HexgenBadgeVariant.primary,
-      'price': '₹ 1,830',
-      'bowlerConfig': '112 km/h • Off stump',
-      'tracking': 'Pose Telemetry Streamed',
-      'coach': 'Coach Madhu',
-      'entryGate': 'Gate B • Lane 03',
-    },
-    {
-      'id': 'HEX-BK75890',
-      'venue': 'Royal Cricket Pavilion',
-      'lane': 'Lane 1 • Master Turf',
-      'location': 'Koramangala, Bangalore',
-      'date': '10 Sep 2025',
-      'time': '05:00 PM - 06:00 PM',
-      'sport': 'Cricket',
-      'status': 'COMPLETED',
-      'badgeVariant': HexgenBadgeVariant.primary,
-      'price': '₹ 1,800',
-      'bowlerConfig': 'Spin Dynamics • Flighted',
-      'tracking': 'Telemetry Stored in Session Log',
-      'coach': 'Coach Priya Sharma',
-      'entryGate': 'Gate C • Deck 1',
-    },
-    {
-      'id': 'HEX-BK74211',
-      'venue': 'Hexgen Sports Arena',
-      'lane': 'Lane 2 • Speed Track',
-      'location': 'Shanthinagar, Bangalore',
-      'date': '28 Aug 2025',
-      'time': '08:00 AM - 09:00 AM',
-      'sport': 'Cricket',
-      'status': 'CANCELLED',
-      'badgeVariant': HexgenBadgeVariant.gold,
-      'price': '₹ 1,500 (Refunded)',
-      'bowlerConfig': 'Cancelled by User',
-      'tracking': 'N/A',
-      'coach': 'None',
-      'entryGate': 'N/A',
-    },
-  ];
+  final List<Map<String, dynamic>> _upcomingBookings = [];
+  final List<Map<String, dynamic>> _pastBookings = [];
 
   void _showQrPassModal(BuildContext context, Map<String, dynamic> booking) {
     showModalBottomSheet(
@@ -226,72 +149,129 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     );
   }
 
+  void _navigateBack() {
+    if (widget.returnToDashboard || !Navigator.canPop(context)) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const PlayerDashboardScreen(
+            playerName: 'Rahul Kumar',
+            playerId: 'HEX-99481',
+            initialIndex: 0,
+          ),
+        ),
+        (route) => false,
+      );
+    } else {
+      Navigator.pop(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentList = _selectedTab == 0 ? _upcomingBookings : _pastBookings;
 
-    return Scaffold(
-      backgroundColor: AppTheme.iceBlue,
-      appBar: AppBar(
-        backgroundColor: AppTheme.iceBlue,
-        elevation: 0,
-        centerTitle: false,
-        title: const Text(
-          'MY ARENA BOOKINGS',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w900,
-            color: AppTheme.navyBlue,
-            letterSpacing: 0.6,
-            fontFamily: 'Roboto',
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.navyBlue, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon: _isLoading
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.electricBlue),
-                  )
-                : const Icon(Icons.refresh_rounded, color: AppTheme.navyBlue, size: 20),
-            onPressed: _fetchLiveBookings,
-          ),
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppTheme.pureWhite,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppTheme.cardBorderColor),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+    return PopScope(
+      canPop: !widget.returnToDashboard,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _navigateBack();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: CyberGlassBackdrop(
+          child: SafeArea(
+            child: Column(
               children: [
-                const Icon(Icons.confirmation_number_outlined, size: 14, color: AppTheme.electricBlue),
-                const SizedBox(width: 4),
-                Text(
-                  '${_upcomingBookings.length} Active',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.navyBlue,
+                // ── Top Header Bar ───────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: _navigateBack,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppTheme.cardBorderColor,
+                              width: 1.2,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_ios_rounded,
+                            color: AppTheme.navyBlue,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'MY ARENA BOOKINGS',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                          color: AppTheme.navyBlue,
+                          letterSpacing: 0.6,
+                          fontFamily: 'Roboto',
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: _isLoading
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppTheme.electricBlue),
+                              )
+                            : const Icon(Icons.refresh_rounded,
+                                color: AppTheme.navyBlue, size: 20),
+                        onPressed: _fetchLiveBookings,
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.pureWhite,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFD6E4F8)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF0F2B5C)
+                                  .withValues(alpha: 0.08),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.confirmation_number_outlined,
+                                size: 14, color: AppTheme.electricBlue),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${_upcomingBookings.length} Active',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.navyBlue,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // ── Real-Time Session Reminder Banner ───────────────────────────
-          if (_upcomingBookings.isNotEmpty)
-            _buildUpcomingReminderCard(_upcomingBookings.first),
+
+                // ── Real-Time Session Reminder Banner ───────────────────────────
+                if (_upcomingBookings.isNotEmpty)
+                  _buildUpcomingReminderCard(_upcomingBookings.first),
 
           // ── Tab Toggle ──────────────────────────────────────────────────
           Padding(
@@ -347,22 +327,29 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  ),
+),
+);
+}
 
   Widget _buildUpcomingReminderCard(Map<String, dynamic> booking) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 4, 16, 6),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFF6FF),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF0038B8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFBFDBFE), width: 1.2),
+        border: Border.all(color: const Color(0xFF1E293B), width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.electricBlue.withValues(alpha: 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            color: const Color(0xFF0057FF).withValues(alpha: 0.28),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -370,13 +357,16 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: const BoxDecoration(
-              color: AppTheme.electricBlue,
+            decoration: BoxDecoration(
+              color: const Color(0xFF00E676).withValues(alpha: 0.18),
               shape: BoxShape.circle,
+              border: Border.all(
+                color: const Color(0xFF00E676).withValues(alpha: 0.4),
+              ),
             ),
             child: const Icon(
               Icons.notifications_active_rounded,
-              color: Colors.white,
+              color: Color(0xFF00E676),
               size: 18,
             ),
           ),
@@ -392,46 +382,48 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                       style: TextStyle(
                         fontSize: 9.5,
                         fontWeight: FontWeight.w900,
-                        color: AppTheme.electricBlue,
+                        color: Color(0xFF00E676),
                         letterSpacing: 0.6,
                         fontFamily: 'Roboto',
                       ),
                     ),
                     const Spacer(),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFDBEAFE),
+                        color: Colors.white.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Text(
                         'Lane 1 • Gate B',
                         style: TextStyle(
-                          fontSize: 9,
+                          fontSize: 9.5,
                           fontWeight: FontWeight.w800,
-                          color: AppTheme.navyBlue,
+                          color: Color(0xFF94A3B8),
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
                   '${booking['venue']} • ${booking['time']}',
                   style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.navyBlue,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                Text(
+                const SizedBox(height: 2),
+                const Text(
                   'Radar & 60FPS AI cameras auto-armed on check-in',
                   style: TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w500,
-                    color: AppTheme.slateBlue.withValues(alpha: 0.9),
+                    color: Color(0xFFCBD5E1),
                   ),
                 ),
               ],
@@ -663,22 +655,56 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                           foregroundColor: const Color(0xFFEF4444),
                           side: const BorderSide(color: Color(0xFFFCA5A5)),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                           minimumSize: const Size(0, 36),
                         ),
                         child: const Text(
                           'CANCEL',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+                          style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
+                      OutlinedButton.icon(
+                        icon: Icon(
+                          item['configured'] == true ? Icons.check_circle_rounded : Icons.tune_rounded,
+                          size: 13,
+                        ),
+                        label: Text(
+                          item['configured'] == true ? 'PROGRAMMED' : 'PROGRAM SESSION',
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+                        ),
+                        onPressed: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SessionConfigScreen(),
+                            ),
+                          );
+                          if (result == true || result != null) {
+                            setState(() {
+                              item['configured'] = true;
+                              item['bowlerConfig'] = 'Configured • AI Armed';
+                            });
+                          }
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: item['configured'] == true ? const Color(0xFF10B981) : AppTheme.electricBlue,
+                          side: BorderSide(
+                            color: item['configured'] == true ? const Color(0xFF6EE7B7) : AppTheme.electricBlue,
+                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          minimumSize: const Size(0, 36),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
                       HexgenButton(
-                        text: 'VIEW PASS',
+                        text: 'PASS',
                         icon: Icons.qr_code_rounded,
                         isFullWidth: false,
-                        height: 38,
+                        height: 36,
                         borderRadius: 12,
-                        fontSize: 11,
+                        fontSize: 10.5,
                         onPressed: () => _showQrPassModal(context, item),
                       ),
                     ],

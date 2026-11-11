@@ -622,7 +622,7 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.65),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
                           boxShadow: [
@@ -655,7 +655,7 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.65),
+                            color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
                             boxShadow: [
@@ -908,7 +908,7 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
                                 borderRadius: BorderRadius.circular(22),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFF1C3E78).withValues(alpha: 0.08),
+                                    color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
                                     blurRadius: 18,
                                     offset: const Offset(0, 5),
                                   ),
@@ -921,10 +921,10 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.65),
+                                      color: Colors.white,
                                       borderRadius: BorderRadius.circular(22),
                                       border: Border.all(
-                                        color: Colors.white.withValues(alpha: 0.85),
+                                        color: const Color(0xFFD6E4F8),
                                         width: 1.2,
                                       ),
                                     ),
@@ -1034,7 +1034,7 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF1C3E78).withValues(alpha: 0.08),
+                color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
                 blurRadius: 18,
                 offset: const Offset(0, 5),
               ),
@@ -1047,9 +1047,9 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
               child: Container(
                 padding: const EdgeInsets.all(28),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.70),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 1.2),
+                  border: Border.all(color: const Color(0xFFD6E4F8), width: 1.2),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -1175,10 +1175,10 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.65),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.85),
+                  color: const Color(0xFFD6E4F8),
                   width: 1.2,
                 ),
               ),

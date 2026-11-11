@@ -464,16 +464,16 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.75),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.9),
-              width: 1.4,
+              color: const Color(0xFFD6E4F8),
+              width: 1.2,
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF1C3E78).withValues(alpha: 0.06),
-                blurRadius: 18,
+                color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
+                blurRadius: 16,
                 offset: const Offset(0, 4),
               ),
             ],
@@ -724,15 +724,15 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.72),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.88),
+              color: const Color(0xFFD6E4F8),
               width: 1.2,
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF1C3E78).withValues(alpha: 0.05),
+                color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
                 blurRadius: 16,
                 offset: const Offset(0, 4),
               ),
