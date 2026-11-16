@@ -61,7 +61,7 @@ class MapHeaderWidget extends StatelessWidget {
                     fontWeight: FontWeight.w900,
                     color: AppTheme.navyBlue,
                     letterSpacing: 0.8,
-                    fontFamily: 'Roboto',
+
                   ),
                 ),
               ),
@@ -216,7 +216,7 @@ class MapHeaderWidget extends StatelessWidget {
                     fontSize: 11.5,
                     fontWeight: FontWeight.w900,
                     color: AppTheme.navyBlue,
-                    fontFamily: 'Roboto',
+
                   ),
                 ),
               ),
@@ -269,26 +269,6 @@ class _FuturisticSouthIndiaMapPainter extends CustomPainter {
       ..close();
 
     canvas.drawPath(oceanPath, oceanPaint);
-
-    // Highway Vector Line
-    final mainHighwayPaint = Paint()
-      ..color = const Color(0xFF0057FF)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 6.0
-      ..strokeCap = StrokeCap.round;
-
-    final innerStripePaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0
-      ..strokeCap = StrokeCap.round;
-
-    final highwayPath = Path()
-      ..moveTo(w * 0.22, h * 0.28)
-      ..cubicTo(w * 0.45, h * 0.25, w * 0.65, h * 0.28, w * 0.78, h * 0.28);
-
-    canvas.drawPath(highwayPath, mainHighwayPaint);
-    canvas.drawPath(highwayPath, innerStripePaint);
   }
 
   @override

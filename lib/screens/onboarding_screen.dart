@@ -1,10 +1,7 @@
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../core/widgets/cyber_glass_backdrop.dart';
 import '../widgets/map_header_widget.dart';
-import '../features/onboarding/player_setup_sheet.dart';
-import 'complete_profile_screen.dart';
+import 'register_sheet.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -19,17 +16,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<OnboardingSlideData> _slides = const [
     OnboardingSlideData(
+      icon: Icons.location_on_rounded,
+      titlePrefix: 'Discover Venues ',
+      titleHighlight: 'Near You',
+      subtitle: 'Find the best cricket grounds\njust around the corner.',
+    ),
+    OnboardingSlideData(
       icon: Icons.groups_rounded,
       titlePrefix: 'Play with ',
       titleHighlight: 'Your friends',
       subtitle:
           'Get your friends together and enjoy\nhassle – free cricket sessions.',
-    ),
-    OnboardingSlideData(
-      icon: Icons.location_on_rounded,
-      titlePrefix: 'Discover Venues ',
-      titleHighlight: 'Near You',
-      subtitle: 'Find the best cricket grounds\njust around the corner.',
     ),
   ];
 
@@ -39,40 +36,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
-  Future<void> _handleReadySetBat() async {
-    final prefs = await SharedPreferences.getInstance();
-    final isCompleted = prefs.getBool('is_profile_completed') ?? false;
-
-    if (!mounted) return;
-
-    if (!isCompleted) {
-      // First time user: navigate to CompleteProfileScreen
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const CompleteProfileScreen(),
-        ),
-      );
-    } else {
-      // Returning user: open PlayerSetupBottomSheet (Enter Name & Player ID)
-      final savedName = prefs.getString('player_name') ?? '';
-      final savedId = prefs.getString('player_id') ?? '';
-
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        barrierColor: Colors.black.withValues(alpha: 0.35),
-        builder: (context) => BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: PlayerSetupBottomSheet(
-            selectedRoleTitle: savedName.isNotEmpty ? savedName : 'Athlete',
-            initialName: savedName,
-            initialId: savedId,
-          ),
-        ),
-      );
-    }
+  void _handleReadySetBat() {
+    // Fixed onboarding flow Step 1: Open Register Bottom Sheet (Mobile number)
+    RegisterBottomSheet.show(context);
   }
 
   @override

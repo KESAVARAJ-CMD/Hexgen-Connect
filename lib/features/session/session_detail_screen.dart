@@ -1,9 +1,9 @@
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/cyber_glass_backdrop.dart';
 import '../../models/pose_data.dart';
 import '../../widgets/session_video_stage.dart';
+import 'simple_over_video_screen.dart';
 
 const String _sessionVideoAsset = 'assets/U15S125O3B1.mp4';
 
@@ -82,6 +82,8 @@ class SessionDetailScreen extends StatelessWidget {
                     ..._pace.map((o) => _OverCard(
                           over: o,
                           accent: AppTheme.electricBlue,
+                          sessionTitle: title,
+                          lane: court,
                         )),
                     const SizedBox(height: 12),
                     const _CategoryLabel(
@@ -93,6 +95,8 @@ class SessionDetailScreen extends StatelessWidget {
                     ..._spin.map((o) => _OverCard(
                           over: o,
                           accent: AppTheme.royalBlue,
+                          sessionTitle: title,
+                          lane: court,
                         )),
                     const SizedBox(height: 16),
                     const _SectionLabel('SESSION SETUP'),
@@ -184,7 +188,7 @@ class OverDetailScreen extends StatelessWidget {
                                     fontSize: 14.5,
                                     fontWeight: FontWeight.w900,
                                     color: AppTheme.navyBlue,
-                                    fontFamily: 'Roboto',
+                
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -193,7 +197,7 @@ class OverDetailScreen extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 11.5,
                                     color: AppTheme.slateBlue,
-                                    fontFamily: 'Roboto',
+                
                                   ),
                                 ),
                               ],
@@ -268,7 +272,7 @@ class OverDetailScreen extends StatelessWidget {
                                     fontSize: 13,
                                     fontWeight: FontWeight.w900,
                                     color: accent,
-                                    fontFamily: 'Roboto',
+                
                                   ),
                                 ),
                               ),
@@ -284,7 +288,7 @@ class OverDetailScreen extends StatelessWidget {
                                       fontSize: 12.5,
                                       fontWeight: FontWeight.w900,
                                       color: AppTheme.navyBlue,
-                                      fontFamily: 'Roboto',
+                  
                                     ),
                                   ),
                                   const SizedBox(height: 2),
@@ -293,7 +297,7 @@ class OverDetailScreen extends StatelessWidget {
                                     style: const TextStyle(
                                       fontSize: 11,
                                       color: AppTheme.slateBlue,
-                                      fontFamily: 'Roboto',
+                  
                                     ),
                                   ),
                                 ],
@@ -437,7 +441,7 @@ class _ClipAnalysisScreenState extends State<ClipAnalysisScreen> {
                                       letterSpacing: 0.5,
                                       fontWeight: FontWeight.w800,
                                       color: AppTheme.slateBlue,
-                                      fontFamily: 'Roboto',
+                  
                                     ),
                                   ),
                                 ),
@@ -447,7 +451,7 @@ class _ClipAnalysisScreenState extends State<ClipAnalysisScreen> {
                                     fontSize: 13.5,
                                     fontWeight: FontWeight.w900,
                                     color: AppTheme.navyBlue,
-                                    fontFamily: 'Roboto',
+                
                                   ),
                                 ),
                               ],
@@ -479,7 +483,7 @@ class _ClipAnalysisScreenState extends State<ClipAnalysisScreen> {
                       style: const TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w900,
-                        fontFamily: 'Roboto',
+    
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
@@ -517,30 +521,12 @@ class _Header extends StatelessWidget {
         children: [
           GestureDetector(
             onTap: onBack,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: BackdropFilter(
-                filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.8),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.navyBlue.withAlpha(12),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    color: AppTheme.navyBlue,
-                    size: 16,
-                  ),
-                ),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              child: Icon(
+                Icons.arrow_back_rounded,
+                color: AppTheme.navyBlue,
+                size: 24,
               ),
             ),
           ),
@@ -559,7 +545,7 @@ class _Header extends StatelessWidget {
                     fontSize: 16.5,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.4,
-                    fontFamily: 'Roboto',
+
                   ),
                 ),
                 const Text(
@@ -740,10 +726,14 @@ class _CategoryLabel extends StatelessWidget {
 class _OverCard extends StatelessWidget {
   final Map<String, String> over;
   final Color accent;
+  final String sessionTitle;
+  final String lane;
 
   const _OverCard({
     required this.over,
     required this.accent,
+    this.sessionTitle = 'Practice Session',
+    this.lane = 'Turf Lane 3',
   });
 
   @override
@@ -756,9 +746,13 @@ class _OverCard extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => OverDetailScreen(
-                over: over,
-                accent: accent,
+              builder: (_) => SimpleOverVideoScreen(
+                sessionTitle: sessionTitle,
+                overName: over['over'] ?? 'OVER',
+                overType: over['summary'] ?? 'Practice Delivery',
+                lane: lane,
+                speed: over['speed'] ?? '112 km/h',
+                ballsSummary: over['summary'] ?? '6 Balls',
               ),
             ),
           );
@@ -799,22 +793,43 @@ class _OverCard extends StatelessWidget {
                         fontWeight: FontWeight.w900,
                         color: AppTheme.navyBlue,
                         fontSize: 13.5,
-                        fontFamily: 'Roboto',
+    
                       ),
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      over['summary'] ?? '6 Balls • Tap to view deliveries',
+                      over['summary'] ?? '6 Balls • Tap to watch video',
                       style: const TextStyle(
                         color: AppTheme.slateBlue,
                         fontSize: 11.5,
-                        fontFamily: 'Roboto',
+    
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded, color: AppTheme.electricBlue, size: 22),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  gradient: AppTheme.primaryCtaGradient,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.play_arrow_rounded, color: Colors.white, size: 16),
+                    SizedBox(width: 2),
+                    Text(
+                      'Watch',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -873,7 +888,7 @@ class _SessionSetupGrid extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.5,
                   color: AppTheme.slateBlue,
-                  fontFamily: 'Roboto',
+
                 ),
               ),
               const SizedBox(height: 2),
@@ -885,7 +900,7 @@ class _SessionSetupGrid extends StatelessWidget {
                   fontSize: 12.5,
                   fontWeight: FontWeight.w900,
                   color: AppTheme.navyBlue,
-                  fontFamily: 'Roboto',
+
                 ),
               ),
             ],

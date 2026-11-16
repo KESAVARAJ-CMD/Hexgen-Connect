@@ -1,10 +1,11 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/services/profile_image_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/cyber_glass_backdrop.dart';
 import '../profile/profile_screen.dart';
-import '../profile/settings_screen.dart';
+import '../../screens/notifications_screen.dart';
 import 'tabs/coaches_tab.dart';
 import 'tabs/sessions_tab.dart';
 
@@ -29,6 +30,7 @@ class _PlayerDashboardScreenState extends State<PlayerDashboardScreen> {
   bool _isSubscribed = false;
   late String _currentName;
   late String _currentId;
+  String? _avatarPath;
 
   @override
   void initState() {
@@ -43,10 +45,12 @@ class _PlayerDashboardScreenState extends State<PlayerDashboardScreen> {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('player_name');
     final id = prefs.getString('player_id');
+    final avatar = prefs.getString(ProfileImageService.avatarPrefKey);
     if (mounted) {
       setState(() {
         if (name != null && name.isNotEmpty) _currentName = name;
         if (id != null && id.isNotEmpty) _currentId = id;
+        _avatarPath = avatar;
       });
     }
   }
@@ -55,6 +59,7 @@ class _PlayerDashboardScreenState extends State<PlayerDashboardScreen> {
     setState(() {
       _currentIndex = index;
     });
+    _refreshProfile();
   }
 
   void _onSubscribeSuccess() {
@@ -83,6 +88,7 @@ class _PlayerDashboardScreenState extends State<PlayerDashboardScreen> {
         showTopBar: false,
         showBottomNavBar: false,
         isSubscribed: _isSubscribed,
+        onProfileUpdated: _refreshProfile,
       ),
     ];
 
@@ -112,42 +118,136 @@ class _PlayerDashboardScreenState extends State<PlayerDashboardScreen> {
       padding: const EdgeInsets.fromLTRB(16, 6, 8, 4),
       child: Row(
         children: [
-          const Text(
-            'HEXGEN CONNECT',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 17,
-              color: AppTheme.navyBlue,
-              letterSpacing: 0.8,
-              fontFamily: 'Roboto',
+          // Athlete Avatar with tap to Profile
+          GestureDetector(
+            onTap: () => _navigateToTab(2),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                ProfileImageService.buildAvatar(
+                  avatarPath: _avatarPath,
+                  displayName: _currentName,
+                  size: 38,
+                  borderWidth: 2,
+                ),
+                // Green active dot
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const Spacer(),
+          const SizedBox(width: 10),
+          // Dynamic Greeting / Title based on Tab
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_currentIndex == 0) ...[
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          'Hi, $_currentName 🏏',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 16,
+                            color: AppTheme.navyBlue,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.verified_rounded,
+                        color: Color(0xFF0052FF),
+                        size: 15,
+                      ),
+                    ],
+                  ),
+                  const Text(
+                    'Sessions & Net Practice',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: Color(0xFF64748B),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ] else if (_currentIndex == 1) ...[
+                  const Text(
+                    'Coach Hub 🌐',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                      color: AppTheme.navyBlue,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const Text(
+                    'Connect with Certified Mentors',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: Color(0xFF64748B),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ] else ...[
+                  const Row(
+                    children: [
+                      Text(
+                        'Athlete Profile',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 17,
+                          color: AppTheme.navyBlue,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      SizedBox(width: 5),
+                      Icon(
+                        Icons.verified_rounded,
+                        color: Color(0xFF0052FF),
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                  Text(
+                    '$_currentId • Pro Telemetry',
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: Color(0xFF64748B),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
           IconButton(
             tooltip: 'Notifications',
             icon: const Icon(Icons.notifications_outlined, color: AppTheme.navyBlue),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('No new notifications'),
-                  behavior: SnackBarBehavior.floating,
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-          ),
-          IconButton(
-            tooltip: 'Settings',
-            icon: const Icon(Icons.settings_outlined, color: AppTheme.navyBlue),
-            onPressed: () async {
-              await Navigator.push(
+              Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => const SettingsScreen()),
+                  builder: (context) => const NotificationsScreen(),
+                ),
               );
-              _refreshProfile();
             },
           ),
         ],

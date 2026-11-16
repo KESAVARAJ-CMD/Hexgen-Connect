@@ -13,11 +13,10 @@ class _SetSubProfileScreenState extends State<SetSubProfileScreen> {
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
 
-  int _selectedLevelIndex = 0; // 0 = Beginner, 1 = Trainer, 2 = Pro, 3 = Expert, 4 = Master
+  int _selectedLevelIndex = 0; // 0 = Beginner, 1 = Pro, 2 = Expert, 3 = Master
 
   final List<String> _levels = [
     'Beginner',
-    'Trainer',
     'Pro',
     'Expert',
     'Master',
@@ -63,9 +62,9 @@ class _SetSubProfileScreenState extends State<SetSubProfileScreen> {
                       child: const Padding(
                         padding: EdgeInsets.all(4),
                         child: Icon(
-                          Icons.arrow_back_ios_rounded,
+                          Icons.arrow_back_rounded,
                           color: AppTheme.navyBlue,
-                          size: 20,
+                          size: 24,
                         ),
                       ),
                     ),

@@ -7,6 +7,7 @@ class ProfileScreen extends StatelessWidget {
   final bool? isSubscribed;
   final bool showTopBar;
   final bool showBottomNavBar;
+  final VoidCallback? onProfileUpdated;
 
   const ProfileScreen({
     super.key,
@@ -15,6 +16,7 @@ class ProfileScreen extends StatelessWidget {
     this.isSubscribed,
     this.showTopBar = false,
     this.showBottomNavBar = false,
+    this.onProfileUpdated,
   });
 
   @override
@@ -24,6 +26,8 @@ class ProfileScreen extends StatelessWidget {
       showBottomNavBar: showBottomNavBar,
       name: name,
       id: id,
+      isSubscribed: isSubscribed,
+      onProfileUpdated: onProfileUpdated,
     );
   }
 }

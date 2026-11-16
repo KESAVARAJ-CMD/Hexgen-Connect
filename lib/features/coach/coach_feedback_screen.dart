@@ -5,6 +5,7 @@ import '../../core/widgets/hexgen_badge.dart';
 import '../../core/widgets/hexgen_button.dart';
 import '../../core/widgets/hexgen_card.dart';
 import '../../services/demo_state.dart';
+import 'coach_chat_screen.dart';
 
 class CoachFeedbackScreen extends StatefulWidget {
   const CoachFeedbackScreen({super.key});
@@ -47,11 +48,11 @@ class _CoachFeedbackScreenState extends State<CoachFeedbackScreen> {
             fontSize: 18,
             fontWeight: FontWeight.w900,
             color: AppTheme.navyBlue,
-            fontFamily: 'Roboto',
+            
           ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.navyBlue, size: 18),
+          icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.navyBlue, size: 22),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -101,6 +102,54 @@ class _CoachFeedbackScreenState extends State<CoachFeedbackScreen> {
                 );
               },
             ),
+
+            const SizedBox(height: 12),
+
+            // Discuss in WhatsApp-style DM
+            GestureDetector(
+              onTap: () {
+                final coach = _state.verifiedCoaches.firstWhere(
+                  (c) => c['name'] == _state.activeCoachName,
+                  orElse: () => _state.verifiedCoaches.first,
+                );
+                CoachChatScreen.open(
+                  context,
+                  coach: coach,
+                  initialAttachedSession: 'Technical Feedback • ${f['strength'] ?? 'Net Practice Report'}',
+                );
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                decoration: BoxDecoration(
+                  gradient: AppTheme.primaryCtaGradient,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0052FF).withValues(alpha: 0.25),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.chat_bubble_rounded, size: 16, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text(
+                      'DISCUSS WITH COACH IN DM 💬',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -108,6 +157,12 @@ class _CoachFeedbackScreenState extends State<CoachFeedbackScreen> {
   }
 
   Widget _buildExecutiveSummaryCard(Map<String, String> f) {
+    final activeCoach = _state.verifiedCoaches.firstWhere(
+      (c) => c['name'] == _state.activeCoachName,
+      orElse: () => _state.verifiedCoaches.first,
+    );
+    final assetPath = activeCoach['assetImage'] as String?;
+
     return HexgenCard(
       hasGlow: true,
       hasTopAccent: true,
@@ -117,12 +172,35 @@ class _CoachFeedbackScreenState extends State<CoachFeedbackScreen> {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: AppTheme.electricBlue,
-                child: Text(
-                  _state.activeCoachName.replaceAll('Coach ', '')[0],
-                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'Roboto'),
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFD6E4F8), width: 1.5),
+                ),
+                child: ClipOval(
+                  child: assetPath != null
+                      ? Image.asset(
+                          assetPath,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            color: AppTheme.electricBlue,
+                            alignment: Alignment.center,
+                            child: Text(
+                              _state.activeCoachName.replaceAll('Coach ', '')[0],
+                              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        )
+                      : Container(
+                          color: AppTheme.electricBlue,
+                          alignment: Alignment.center,
+                          child: Text(
+                            _state.activeCoachName.replaceAll('Coach ', '')[0],
+                            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -130,8 +208,8 @@ class _CoachFeedbackScreenState extends State<CoachFeedbackScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(_state.activeCoachName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: AppTheme.navyBlue, fontFamily: 'Roboto')),
-                    Text(_state.activeCoachHandle, style: const TextStyle(fontSize: 11, color: AppTheme.slateBlue, fontFamily: 'Roboto')),
+                    Text(_state.activeCoachName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: AppTheme.navyBlue)),
+                    Text(_state.activeCoachHandle, style: const TextStyle(fontSize: 11, color: AppTheme.slateBlue)),
                   ],
                 ),
               ),
@@ -165,9 +243,9 @@ class _CoachFeedbackScreenState extends State<CoachFeedbackScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: color, letterSpacing: 1.2, fontFamily: 'Roboto')),
+              Text(label, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: color, letterSpacing: 1.2)),
               const SizedBox(height: 4),
-              Text(val, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppTheme.navyBlue, height: 1.4, fontFamily: 'Roboto')),
+              Text(val, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppTheme.navyBlue, height: 1.4)),
             ],
           ),
         ),
@@ -180,7 +258,7 @@ class _CoachFeedbackScreenState extends State<CoachFeedbackScreen> {
     if (lines.isEmpty) {
       return HexgenCard(
         padding: const EdgeInsets.all(16),
-        child: const Text('Watch the highlighted moments and complete six slow shadow drives.', style: TextStyle(fontSize: 12, color: AppTheme.slateBlue, fontFamily: 'Roboto')),
+        child: const Text('Watch the highlighted moments and complete six slow shadow drives.', style: TextStyle(fontSize: 12, color: AppTheme.slateBlue)),
       );
     }
 
@@ -208,9 +286,9 @@ class _CoachFeedbackScreenState extends State<CoachFeedbackScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title.toUpperCase(), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: AppTheme.electricBlue, letterSpacing: 0.8, fontFamily: 'Roboto')),
+                      Text(title.toUpperCase(), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: AppTheme.electricBlue, letterSpacing: 0.8)),
                       const SizedBox(height: 2),
-                      Text(detail, style: const TextStyle(fontSize: 12.5, color: AppTheme.navyBlue, height: 1.4, fontFamily: 'Roboto')),
+                      Text(detail, style: const TextStyle(fontSize: 12.5, color: AppTheme.navyBlue, height: 1.4)),
                     ],
                   ),
                 ),
@@ -240,7 +318,7 @@ class _CoachFeedbackScreenState extends State<CoachFeedbackScreen> {
                   child: const Center(child: Icon(Icons.camera_alt_rounded, color: AppTheme.electricBlue, size: 24)),
                 ),
                 const SizedBox(height: 8),
-                const Text('FRAME 42 • IMPACT', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: AppTheme.navyBlue, fontFamily: 'Roboto')),
+                const Text('FRAME 42 • IMPACT', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: AppTheme.navyBlue)),
               ],
             ),
           ),
@@ -261,7 +339,7 @@ class _CoachFeedbackScreenState extends State<CoachFeedbackScreen> {
                   child: const Icon(Icons.sports_cricket_rounded, color: AppTheme.royalBlue, size: 24),
                 ),
                 const SizedBox(height: 8),
-                const Text('BALL RELEASE SNAP', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: AppTheme.navyBlue, fontFamily: 'Roboto')),
+                const Text('BALL RELEASE SNAP', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: AppTheme.navyBlue)),
               ],
             ),
           ),
@@ -285,8 +363,8 @@ class _CoachFeedbackScreenState extends State<CoachFeedbackScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('COACH VOICE MEMO', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: AppTheme.electricBlue, letterSpacing: 0.8, fontFamily: 'Roboto')),
-                Text('Listen to coach analysis (01:15)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.navyBlue, fontFamily: 'Roboto')),
+                Text('COACH VOICE MEMO', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: AppTheme.electricBlue, letterSpacing: 0.8)),
+                Text('Listen to coach analysis (01:15)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.navyBlue)),
               ],
             ),
           ),
@@ -314,8 +392,8 @@ class _CoachFeedbackScreenState extends State<CoachFeedbackScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('RECOMMENDED YOUTUBE REFERENCE DRILL', style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w900, color: Colors.redAccent, letterSpacing: 0.8, fontFamily: 'Roboto')),
-                Text('https://youtu.be/cricket_high_elbow_drive_drill', style: TextStyle(fontSize: 11, color: AppTheme.navyBlue, fontWeight: FontWeight.bold, decoration: TextDecoration.underline, fontFamily: 'Roboto')),
+                Text('RECOMMENDED YOUTUBE REFERENCE DRILL', style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w900, color: Colors.redAccent, letterSpacing: 0.8)),
+                Text('https://youtu.be/cricket_high_elbow_drive_drill', style: TextStyle(fontSize: 11, color: AppTheme.navyBlue, fontWeight: FontWeight.bold, decoration: TextDecoration.underline)),
               ],
             ),
           ),
@@ -339,11 +417,11 @@ class _CoachFeedbackScreenState extends State<CoachFeedbackScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('YOUR PRACTICE PLAN', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: HexgenColors.voltGreen, letterSpacing: 1.2, fontFamily: 'Roboto')),
+                const Text('YOUR PRACTICE PLAN', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: HexgenColors.voltGreen, letterSpacing: 1.2)),
                 const SizedBox(height: 6),
-                Text(drillTitle, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: AppTheme.navyBlue, fontFamily: 'Roboto')),
+                Text(drillTitle, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: AppTheme.navyBlue)),
                 const SizedBox(height: 2),
-                const Text('A short, focused drill assigned by your coach.', style: TextStyle(fontSize: 11, color: AppTheme.slateBlue, fontFamily: 'Roboto')),
+                const Text('A short, focused drill assigned by your coach.', style: TextStyle(fontSize: 11, color: AppTheme.slateBlue)),
               ],
             ),
           ),
@@ -359,7 +437,7 @@ class _CoachFeedbackScreenState extends State<CoachFeedbackScreen> {
       children: [
         Container(width: 3, height: 12, decoration: BoxDecoration(color: AppTheme.electricBlue, borderRadius: BorderRadius.circular(2))),
         const SizedBox(width: 8),
-        Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppTheme.slateBlue, letterSpacing: 1.2, fontFamily: 'Roboto')),
+        Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppTheme.slateBlue, letterSpacing: 1.2)),
       ],
     );
   }

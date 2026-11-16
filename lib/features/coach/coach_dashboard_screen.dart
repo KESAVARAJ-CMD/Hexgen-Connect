@@ -9,7 +9,7 @@ import '../../core/widgets/hexgen_card.dart';
 import '../../services/demo_state.dart';
 import '../session/session_detail_screen.dart';
 import 'coach_feedback_screen.dart';
-import '../onboarding/role_selection_screen.dart';
+import '../../screens/onboarding_screen.dart';
 
 class CoachDashboardScreen extends StatefulWidget {
   final String coachName;
@@ -430,14 +430,13 @@ class _CoachDashboardScreenState extends State<CoachDashboardScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'MENTOR PORTAL',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
                 color: AppTheme.navyBlue,
                 letterSpacing: 0.6,
-                fontFamily: 'Roboto',
               ),
             ),
             Text(
@@ -464,7 +463,7 @@ class _CoachDashboardScreenState extends State<CoachDashboardScreen> {
             onPressed: () {
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (context) => const RoleSelectionScreen()),
+                MaterialPageRoute(builder: (context) => const OnboardingScreen()),
                 (route) => false,
               );
             },

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../core/network/api_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/hexgen_colors.dart';
 import '../../core/widgets/cyber_glass_backdrop.dart';
@@ -8,11 +7,11 @@ import '../../core/widgets/hexgen_badge.dart';
 import '../../core/widgets/hexgen_button.dart';
 import '../../core/widgets/hexgen_card.dart';
 import '../../models/pose_data.dart';
-import '../../screens/my_bookings_screen.dart';
 import '../../services/demo_state.dart';
 import '../../widgets/skeleton_painter.dart';
 import 'view_coach_profile_screen.dart';
 import 'coach_feedback_screen.dart';
+import 'coach_chat_screen.dart';
 
 class CoachConnectHub extends StatefulWidget {
   final bool showBackButton;
@@ -27,15 +26,6 @@ class _CoachConnectHubState extends State<CoachConnectHub> {
   int _selectedTab = 0; // 0: Coaches List, 1: Coach Feedback
   final TextEditingController _handleController = TextEditingController();
   String _searchHandle = '';
-
-  void _openCoachBookingModal(BuildContext context, Map<String, dynamic> coach) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _CoachBookingBottomSheet(coach: coach),
-    );
-  }
 
   @override
   void initState() {
@@ -54,197 +44,174 @@ class _CoachConnectHubState extends State<CoachConnectHub> {
     super.dispose();
   }
 
+  Widget _buildTabButton({
+    required int index,
+    required String label,
+    int? count,
+    bool isDark = false,
+  }) {
+    final isSel = _selectedTab == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedTab = index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            gradient: isDark ? null : (isSel ? AppTheme.primaryCtaGradient : null),
+            color: isDark ? (isSel ? Colors.white : Colors.transparent) : null,
+            borderRadius: BorderRadius.circular(19),
+          ),
+          child: Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    color: isDark
+                        ? (isSel ? AppTheme.navyBlue : Colors.white)
+                        : (isSel ? Colors.white : AppTheme.navyBlue),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                if (count != null && count > 0) ...[
+                  const SizedBox(width: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                    decoration: BoxDecoration(
+                      color: isSel
+                          ? (isDark ? AppTheme.electricBlue : Colors.white)
+                          : AppTheme.electricBlue,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '$count',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        color: isSel
+                            ? (isDark ? Colors.white : AppTheme.electricBlue)
+                            : Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final pendingCount = _state.allReviews.where((r) => r['status'] == 'PENDING').length;
+
     final Widget content = Column(
       children: [
         // Header Selector (Rendered on iceBlue when embedded, or inside Dark Canopy when standalone)
         if (!widget.showBackButton)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-              child: Container(
-                height: 44,
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: AppTheme.pureWhite,
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: AppTheme.cardBorderColor, width: 1.2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.navyBlue.withValues(alpha: 0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Row(
+            child: Container(
+              height: 44,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: AppTheme.pureWhite,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: AppTheme.cardBorderColor, width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.navyBlue.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  _buildTabButton(index: 0, label: 'COACHES'),
+                  _buildTabButton(index: 1, label: 'REQUESTS', count: pendingCount),
+                  _buildTabButton(index: 2, label: 'FEEDBACK'),
+                ],
+              ),
+            ),
+          )
+        else
+          Container(
+            decoration: const BoxDecoration(
+              gradient: AppTheme.primaryCtaGradient,
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 12, 18, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedTab = 0),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          decoration: BoxDecoration(
-                            gradient: _selectedTab == 0 ? AppTheme.primaryCtaGradient : null,
-                            borderRadius: BorderRadius.circular(19),
-                          ),
-                          child: Center(
-                            child: Text(
-                              'COACHES LIST',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w900,
-                                color: _selectedTab == 0 ? Colors.white : AppTheme.navyBlue,
-                                fontFamily: 'Roboto',
-                              ),
-                            ),
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          behavior: HitTestBehavior.opaque,
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                            child: Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
                           ),
                         ),
-                      ),
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedTab = 1),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          decoration: BoxDecoration(
-                            gradient: _selectedTab == 1 ? AppTheme.primaryCtaGradient : null,
-                            borderRadius: BorderRadius.circular(19),
-                          ),
-                          child: Center(
-                            child: Text(
-                              'COACH FEEDBACK',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w900,
-                                color: _selectedTab == 1 ? Colors.white : AppTheme.navyBlue,
-                                fontFamily: 'Roboto',
-                              ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'HEXGEN CONNECT',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.8,
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            )
-          else
-            Container(
-              decoration: const BoxDecoration(
-                gradient: AppTheme.primaryCtaGradient,
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-              ),
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 12, 18, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                    const SizedBox(height: 14),
+                    // 3-Tab Segmented Selector
+                    Container(
+                      height: 44,
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                      ),
+                      child: Row(
                         children: [
-                          GestureDetector(
-                            onTap: () => Navigator.pop(context),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                              ),
-                              child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          const Expanded(
-                            child: Text(
-                              'HEXGEN CONNECT',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 17,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.8,
-                                fontFamily: 'Roboto',
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
+                          _buildTabButton(index: 0, label: 'COACHES', isDark: true),
+                          _buildTabButton(index: 1, label: 'REQUESTS', count: pendingCount, isDark: true),
+                          _buildTabButton(index: 2, label: 'FEEDBACK', isDark: true),
                         ],
                       ),
-                      const SizedBox(height: 14),
-                      // 2-Tab Segmented Selector
-                      Container(
-                        height: 44,
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(22),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () => setState(() => _selectedTab = 0),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  decoration: BoxDecoration(
-                                    color: _selectedTab == 0 ? Colors.white : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(19),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      'COACHES LIST',
-                                      style: TextStyle(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w900,
-                                        color: _selectedTab == 0 ? AppTheme.navyBlue : Colors.white,
-                                        fontFamily: 'Roboto',
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () => setState(() => _selectedTab = 1),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  decoration: BoxDecoration(
-                                    color: _selectedTab == 1 ? Colors.white : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(19),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      'COACH FEEDBACK',
-                                      style: TextStyle(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w900,
-                                        color: _selectedTab == 1 ? AppTheme.navyBlue : Colors.white,
-                                        fontFamily: 'Roboto',
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
-
-          // Body Content based on selected tab
-          Expanded(
-            child: _selectedTab == 0 ? _buildCoachesListTab() : _buildCoachFeedbackTab(),
           ),
-        ],
-      );
+
+        // Body Content based on selected tab (0: Coaches, 1: Requests, 2: Feedback)
+        Expanded(
+          child: _selectedTab == 0
+              ? _buildCoachesListTab()
+              : _selectedTab == 1
+                  ? _buildRequestsTab()
+                  : _buildCoachFeedbackTab(),
+        ),
+      ],
+    );
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -267,10 +234,10 @@ class _CoachConnectHubState extends State<CoachConnectHub> {
           child: TextField(
             controller: _handleController,
             onChanged: (v) => setState(() => _searchHandle = v),
-            style: const TextStyle(color: AppTheme.navyBlue, fontSize: 13, fontFamily: 'Roboto'),
+            style: const TextStyle(color: AppTheme.navyBlue, fontSize: 13),
             decoration: const InputDecoration(
               hintText: 'Search Coach ID e.g. @coach.madhu...',
-              hintStyle: TextStyle(color: AppTheme.slateBlue, fontSize: 12, fontFamily: 'Roboto'),
+              hintStyle: TextStyle(color: AppTheme.slateBlue, fontSize: 12),
               prefixIcon: Icon(Icons.alternate_email_rounded, color: AppTheme.electricBlue, size: 20),
               border: InputBorder.none,
               contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
@@ -287,7 +254,7 @@ class _CoachConnectHubState extends State<CoachConnectHub> {
             fontWeight: FontWeight.w900,
             color: AppTheme.navyBlue,
             letterSpacing: 0.8,
-            fontFamily: 'Roboto',
+            
           ),
         ),
 
@@ -313,7 +280,7 @@ class _CoachConnectHubState extends State<CoachConnectHub> {
                       color: AppTheme.slateBlue,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      fontFamily: 'Roboto',
+                      
                     ),
                   ),
                 ),
@@ -323,7 +290,13 @@ class _CoachConnectHubState extends State<CoachConnectHub> {
             return Column(
               children: filtered.map((coach) {
                 final String cName = coach['name'] as String;
-                final String initials = cName.replaceAll('Coach ', '')[0].toUpperCase();
+                final String initials = cName.replaceAll('Coach ', '').substring(0, 1).toUpperCase();
+                final String? assetPath = coach['assetImage'] as String?;
+                final String role = coach['role'] ?? 'Cricket Coach';
+                final String rating = coach['rating'] ?? '★ 4.9';
+                final String responseTime = coach['responseTime'] ?? '⚡ Replies quickly';
+                final String pricing = coach['pricing'] ?? '₹499 / session';
+                final bool isOnline = coach['status'] == 'ONLINE NOW';
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 14),
@@ -333,6 +306,7 @@ class _CoachConnectHubState extends State<CoachConnectHub> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Coach Header Row with Realistic Photo Avatar
                         GestureDetector(
                           onTap: () {
                             Navigator.push(
@@ -344,55 +318,130 @@ class _CoachConnectHubState extends State<CoachConnectHub> {
                           },
                           child: Row(
                             children: [
-                              CircleAvatar(
-                                radius: 24,
-                                backgroundColor: AppTheme.electricBlue,
-                                child: Text(
-                                  initials,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 18,
-                                    fontFamily: 'Roboto',
+                              Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Container(
+                                    width: 52,
+                                    height: 52,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: const Color(0xFFD6E4F8), width: 1.5),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.06),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ClipOval(
+                                      child: assetPath != null
+                                          ? Image.asset(
+                                              assetPath,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) => Container(
+                                                color: AppTheme.electricBlue,
+                                                alignment: Alignment.center,
+                                                child: Text(
+                                                  initials,
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.w900,
+                                                    fontSize: 20,
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                          : Container(
+                                              color: AppTheme.electricBlue,
+                                              alignment: Alignment.center,
+                                              child: Text(
+                                                initials,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w900,
+                                                  fontSize: 20,
+                                                ),
+                                              ),
+                                            ),
+                                    ),
                                   ),
-                                ),
+                                  // Green Active / Online indicator
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: Container(
+                                      width: 12,
+                                      height: 12,
+                                      decoration: BoxDecoration(
+                                        color: isOnline ? const Color(0xFF10B981) : const Color(0xFF3B82F6),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: Colors.white, width: 2),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 14),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Text(
-                                          cName,
-                                          style: const TextStyle(
-                                            color: AppTheme.navyBlue,
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w900,
-                                            fontFamily: 'Roboto',
+                                        Flexible(
+                                          child: Text(
+                                            cName,
+                                            style: const TextStyle(
+                                              color: AppTheme.navyBlue,
+                                              fontSize: 15.5,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
-                                        Text(
-                                          coach['rating'],
-                                          style: const TextStyle(
-                                            color: AppTheme.navyBlue,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w800,
-                                            fontFamily: 'Roboto',
+                                        const SizedBox(width: 4),
+                                        const Icon(
+                                          Icons.verified_rounded,
+                                          color: Color(0xFF0052FF),
+                                          size: 15,
+                                        ),
+                                        const Spacer(),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFFEF3C7),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            rating,
+                                            style: const TextStyle(
+                                              color: Color(0xFFB45309),
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w900,
+                                            ),
                                           ),
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 2),
+                                    const SizedBox(height: 3),
                                     Text(
-                                      '${coach['handle']} • ${coach['role']} (Tap to View Profile)',
+                                      role,
                                       style: const TextStyle(
                                         color: AppTheme.slateBlue,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${coach['handle']} • ${coach['experience']}',
+                                      style: const TextStyle(
+                                        color: Color(0xFF94A3B8),
                                         fontSize: 11,
                                         fontWeight: FontWeight.w500,
-                                        fontFamily: 'Roboto',
                                       ),
                                     ),
                                   ],
@@ -401,43 +450,88 @@ class _CoachConnectHubState extends State<CoachConnectHub> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 14),
+
+                        const SizedBox(height: 12),
+
+                        // Info Pill Badges (Response time & pricing)
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 8, height: 8,
-                                  decoration: const BoxDecoration(color: HexgenColors.voltGreen, shape: BoxShape.circle),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF0FDF4),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFDCFCE7)),
+                              ),
+                              child: Text(
+                                responseTime,
+                                style: const TextStyle(
+                                  color: Color(0xFF16A34A),
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w800,
                                 ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  coach['status'],
-                                  style: const TextStyle(
-                                    color: HexgenColors.voltGreen,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w900,
-                                    fontFamily: 'Roboto',
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
+                            const Spacer(),
                             Text(
-                              coach['experience'],
+                              pricing,
                               style: const TextStyle(
-                                color: AppTheme.slateBlue,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                fontFamily: 'Roboto',
+                                color: AppTheme.navyBlue,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w900,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
+
+                        const SizedBox(height: 14),
+
+                        // Dual Action Buttons: Chat (WhatsApp Style) & Profile
                         Row(
                           children: [
+                            // 1. WhatsApp-Style Direct Chat Button
                             Expanded(
+                              flex: 3,
+                              child: GestureDetector(
+                                onTap: () {
+                                  CoachChatScreen.open(context, coach: coach);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  decoration: BoxDecoration(
+                                    gradient: AppTheme.primaryCtaGradient,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF0052FF).withValues(alpha: 0.22),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.chat_bubble_rounded, size: 14, color: Colors.white),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'CHAT (DM)',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.white,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // 2. View Profile Button
+                            Expanded(
+                              flex: 2,
                               child: OutlinedButton(
                                 onPressed: () {
                                   Navigator.push(
@@ -448,27 +542,26 @@ class _CoachConnectHubState extends State<CoachConnectHub> {
                                   );
                                 },
                                 style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: AppTheme.electricBlue),
+                                  side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.1),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  backgroundColor: const Color(0xFFF8FAFC),
                                 ),
-                                child: const Text(
-                                  'VIEW PROFILE',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w900,
-                                    color: AppTheme.electricBlue,
-                                    fontFamily: 'Roboto',
-                                  ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.person_outline_rounded, size: 14, color: AppTheme.navyBlue),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'BIO',
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppTheme.navyBlue,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: HexgenButton(
-                                text: 'BOOK 1-ON-1 ⚡',
-                                icon: Icons.calendar_month_rounded,
-                                onPressed: () => _openCoachBookingModal(context, coach),
                               ),
                             ),
                           ],
@@ -485,24 +578,16 @@ class _CoachConnectHubState extends State<CoachConnectHub> {
     );
   }
 
-  Widget _buildCoachFeedbackTab() {
-    final reviews = List<Map<String, dynamic>>.from(_state.allReviews);
-    if (_state.status == ReviewStatus.pending) {
-      reviews.insert(0, {
-        'coachName': _state.activeCoachName,
-        'coachHandle': _state.activeCoachHandle,
-        'date': 'PENDING • JUST NOW',
-        'session': 'SESSION NEW • IN QUEUE',
-        'status': 'PENDING',
-        'focus': 'Awaiting biomechanical pose telemetry review by ${_state.activeCoachName}.',
-        'drill': 'Shadow Practice & Stance Hold',
-      });
-    }
+  // ── TAB 1: SUBMITTED REQUESTS (Waiting for Coach) ─────────────────────────
+  Widget _buildRequestsTab() {
+    final requests = _state.allReviews
+        .where((r) => r['status'] == 'PENDING')
+        .toList();
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 28),
       children: [
-        // Header info about review requests
+        // Header info banner
         HexgenCard(
           hasGlow: true,
           hasTopAccent: true,
@@ -516,7 +601,7 @@ class _CoachConnectHubState extends State<CoachConnectHub> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppTheme.cardBorderColor),
                 ),
-                child: const Icon(Icons.rate_review_rounded, color: AppTheme.electricBlue, size: 22),
+                child: const Icon(Icons.schedule_send_rounded, color: AppTheme.electricBlue, size: 22),
               ),
               const SizedBox(width: 14),
               const Expanded(
@@ -529,23 +614,21 @@ class _CoachConnectHubState extends State<CoachConnectHub> {
                         fontSize: 12.5,
                         fontWeight: FontWeight.w900,
                         color: AppTheme.navyBlue,
-                        fontFamily: 'Roboto',
                       ),
                     ),
                     SizedBox(height: 2),
                     Text(
-                      'Tap any request to open full technical feedback report.',
+                      'Questions & video clips sent to coach awaiting review.',
                       style: TextStyle(
                         fontSize: 11,
                         color: AppTheme.slateBlue,
-                        fontFamily: 'Roboto',
                       ),
                     ),
                   ],
                 ),
               ),
               HexgenBadge(
-                label: '${reviews.length} TOTAL',
+                label: '${requests.length} PENDING',
                 variant: HexgenBadgeVariant.volt,
                 fontSize: 8.5,
               ),
@@ -553,84 +636,430 @@ class _CoachConnectHubState extends State<CoachConnectHub> {
           ),
         ),
 
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
 
-        ...reviews.map((r) {
-          final bool isPending = r['status'] == 'PENDING';
-          final String cName = r['coachName'] ?? 'Coach';
-          final String initials = cName.replaceAll('Coach ', '')[0].toUpperCase();
-
-          return Container(
-            margin: const EdgeInsets.only(bottom: 14),
-            child: HexgenCard(
-              hasGlow: true,
-              hasTopAccent: true,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CoachFeedbackScreen()),
-                );
-              },
+        if (requests.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: AppTheme.electricBlue,
-                        child: Text(
-                          initials,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14, fontFamily: 'Roboto'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(cName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppTheme.navyBlue, fontFamily: 'Roboto')),
-                            Text('${r['coachHandle']} • ${r['session']}', style: const TextStyle(fontSize: 10.5, color: AppTheme.slateBlue, fontFamily: 'Roboto')),
-                          ],
-                        ),
-                      ),
-                      HexgenBadge(
-                        label: r['status'] ?? 'PUBLISHED',
-                        variant: isPending ? HexgenBadgeVariant.volt : HexgenBadgeVariant.volt,
-                        fontSize: 8,
-                      ),
-                    ],
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFEFF6FF),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.mark_chat_unread_outlined,
+                      size: 42,
+                      color: AppTheme.electricBlue,
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    r['focus'] ?? '',
-                    style: const TextStyle(fontSize: 12, color: AppTheme.navyBlue, height: 1.4, fontWeight: FontWeight.w600, fontFamily: 'Roboto'),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  const SizedBox(height: 16),
+                  const Text(
+                    'No Active Requests',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: AppTheme.navyBlue,
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(r['date'] ?? '', style: const TextStyle(fontSize: 9.5, color: AppTheme.slateBlue, fontWeight: FontWeight.bold, fontFamily: 'Roboto')),
-                      const Row(
-                        children: [
-                          Text('Open Report', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AppTheme.electricBlue, fontFamily: 'Roboto')),
-                          SizedBox(width: 4),
-                          Icon(Icons.arrow_forward_rounded, size: 14, color: AppTheme.electricBlue),
-                        ],
-                      ),
-                    ],
+                  const SizedBox(height: 6),
+                  const Text(
+                    'When you ask a coach about a session or delivery, your question and clip will appear here while waiting for review.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF64748B),
+                    ),
                   ),
                 ],
               ),
             ),
-          );
-        }),
+          )
+        else
+          ...requests.map((r) {
+            final String cName = r['coachName'] ?? 'Coach';
+            final String initials = cName.replaceAll('Coach ', '')[0].toUpperCase();
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              child: HexgenCard(
+                hasGlow: true,
+                hasTopAccent: true,
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Top row: Coach info + PENDING badge
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: AppTheme.electricBlue,
+                          child: Text(
+                            initials,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      cName,
+                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppTheme.navyBlue),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.verified_rounded, size: 14, color: AppTheme.electricBlue),
+                                ],
+                              ),
+                              Text(
+                                r['coachHandle'] ?? '',
+                                style: const TextStyle(fontSize: 11, color: AppTheme.slateBlue),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFFDE68A)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.hourglass_top_rounded, size: 11, color: Color(0xFFD97706)),
+                              SizedBox(width: 4),
+                              Text(
+                                'PENDING',
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFFD97706),
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Attached Session Pill
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.videocam_rounded, size: 15, color: AppTheme.electricBlue),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              r['session'] ?? 'Session Attached',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.navyBlue,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // Topic & Question
+                    if (r['topic'] != null) ...[
+                      Text(
+                        r['topic'] as String,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.electricBlue,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                    Text(
+                      r['question'] ?? r['focus'] ?? 'Awaiting Coach Review',
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.navyBlue,
+                        height: 1.35,
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+                    const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                    const SizedBox(height: 10),
+
+                    // Bottom: Sent time + Estimated turnaround
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.schedule_rounded, size: 13, color: AppTheme.slateBlue),
+                            const SizedBox(width: 4),
+                            Text(
+                              r['date'] ?? 'Just now',
+                              style: const TextStyle(fontSize: 10, color: AppTheme.slateBlue, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        const Row(
+                          children: [
+                            Icon(Icons.bolt_rounded, size: 14, color: AppTheme.electricBlue),
+                            SizedBox(width: 2),
+                            Text(
+                              'Reply expected in 2-4 hrs',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.electricBlue,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
       ],
     );
   }
 
+  // ── TAB 2: COMPLETED COACH FEEDBACK & DRILLS ──────────────────────────────
+  Widget _buildCoachFeedbackTab() {
+    final reviews = _state.allReviews
+        .where((r) => r['status'] == 'PUBLISHED')
+        .toList();
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 28),
+      children: [
+        // Header info banner
+        HexgenCard(
+          hasGlow: true,
+          hasTopAccent: true,
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFA7F3D0)),
+                ),
+                child: const Icon(Icons.verified_rounded, color: Color(0xFF059669), size: 22),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'COMPLETED COACH REVIEWS',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w900,
+                        color: AppTheme.navyBlue,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Tap any review to view drills, posture HUD & voice notes.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.slateBlue,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              HexgenBadge(
+                label: '${reviews.length} COMPLETED',
+                variant: HexgenBadgeVariant.volt,
+                fontSize: 8.5,
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        if (reviews.isEmpty)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: Column(
+                children: [
+                  Icon(Icons.rate_review_outlined, size: 42, color: Color(0xFF94A3B8)),
+                  SizedBox(height: 12),
+                  Text(
+                    'No Coach Feedback Yet',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: AppTheme.navyBlue,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Once a coach reviews your submitted request, their technique report and drills will appear here.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          ...reviews.map((r) {
+            final String cName = r['coachName'] ?? 'Coach';
+            final String initials = cName.replaceAll('Coach ', '')[0].toUpperCase();
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              child: HexgenCard(
+                hasGlow: true,
+                hasTopAccent: true,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CoachFeedbackScreen()),
+                  );
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: AppTheme.electricBlue,
+                          child: Text(
+                            initials,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(cName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppTheme.navyBlue)),
+                              Text('${r['coachHandle']} • ${r['session']}', style: const TextStyle(fontSize: 10.5, color: AppTheme.slateBlue)),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFECFDF5),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFA7F3D0)),
+                          ),
+                          child: const Text(
+                            'PUBLISHED',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF059669),
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      r['focus'] ?? '',
+                      style: const TextStyle(fontSize: 12, color: AppTheme.navyBlue, height: 1.4, fontWeight: FontWeight.w600),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (r['drill'] != null) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.fitness_center_rounded, size: 14, color: AppTheme.electricBlue),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Drill: ${r['drill']}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.navyBlue,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(r['date'] ?? '', style: const TextStyle(fontSize: 9.5, color: AppTheme.slateBlue, fontWeight: FontWeight.bold)),
+                        const Row(
+                          children: [
+                            Text('Open Report', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AppTheme.electricBlue)),
+                            SizedBox(width: 4),
+                            Icon(Icons.arrow_forward_rounded, size: 14, color: AppTheme.electricBlue),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+      ],
+    );
+  }
 }
 
 // QUEUING & PIPELINE CONNECTING SCREEN
@@ -711,7 +1140,7 @@ class _CoachQueueScreenState extends State<CoachQueueScreen> {
                     backgroundColor: AppTheme.electricBlue,
                     child: Text(
                       initials,
-                      style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900, fontFamily: 'Roboto'),
+                      style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900),
                     ),
                   ),
                 ],
@@ -719,12 +1148,12 @@ class _CoachQueueScreenState extends State<CoachQueueScreen> {
               const SizedBox(height: 28),
               Text(
                 cName,
-                style: const TextStyle(color: AppTheme.navyBlue, fontSize: 22, fontWeight: FontWeight.w900, fontFamily: 'Roboto'),
+                style: const TextStyle(color: AppTheme.navyBlue, fontSize: 22, fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 6),
               Text(
                 '${widget.coach['handle']} • ${widget.coach['role']}',
-                style: const TextStyle(color: AppTheme.slateBlue, fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'Roboto'),
+                style: const TextStyle(color: AppTheme.slateBlue, fontSize: 12, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 36),
 
@@ -739,7 +1168,7 @@ class _CoachQueueScreenState extends State<CoachQueueScreen> {
                 onTap: () => Navigator.pop(context),
                 child: const Text(
                   'CANCEL REQUEST',
-                  style: TextStyle(color: AppTheme.slateBlue, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1, fontFamily: 'Roboto'),
+                  style: TextStyle(color: AppTheme.slateBlue, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1),
                 ),
               ),
               const SizedBox(height: 20),
@@ -836,7 +1265,7 @@ class _LiveCoachVideoCallScreenState extends State<LiveCoachVideoCallScreen> {
                           SizedBox(width: 6),
                           Text(
                             'LIVE REVIEW • 02:45',
-                            style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900, fontFamily: 'Roboto'),
+                            style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
                           ),
                         ],
                       ),
@@ -854,7 +1283,7 @@ class _LiveCoachVideoCallScreenState extends State<LiveCoachVideoCallScreen> {
                         children: [
                           Text(
                             initials,
-                            style: const TextStyle(color: AppTheme.navyBlue, fontSize: 24, fontWeight: FontWeight.w900, fontFamily: 'Roboto'),
+                            style: const TextStyle(color: AppTheme.navyBlue, fontSize: 24, fontWeight: FontWeight.w900),
                           ),
                           Positioned(
                             bottom: 6, left: 6,
@@ -863,7 +1292,7 @@ class _LiveCoachVideoCallScreenState extends State<LiveCoachVideoCallScreen> {
                               decoration: BoxDecoration(color: AppTheme.navyBlue, borderRadius: BorderRadius.circular(4)),
                               child: Text(
                                 cName.split(' ')[0],
-                                style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold, fontFamily: 'Roboto'),
+                                style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
                               ),
                             ),
                           ),
@@ -893,12 +1322,12 @@ class _LiveCoachVideoCallScreenState extends State<LiveCoachVideoCallScreen> {
                             children: [
                               Text(
                                 '${(widget.coach['handle'] as String).toUpperCase()} AUDIO FEED',
-                                style: const TextStyle(color: AppTheme.electricBlue, fontSize: 9, fontWeight: FontWeight.w900, fontFamily: 'Roboto'),
+                                style: const TextStyle(color: AppTheme.electricBlue, fontSize: 9, fontWeight: FontWeight.w900),
                               ),
                               const SizedBox(height: 2),
                               const Text(
                                 '"Watch your front shoulder on release. Keep your head centered over ball line."',
-                                style: TextStyle(color: AppTheme.navyBlue, fontSize: 12, fontWeight: FontWeight.w700, fontFamily: 'Roboto'),
+                                style: TextStyle(color: AppTheme.navyBlue, fontSize: 12, fontWeight: FontWeight.w700),
                               ),
                             ],
                           ),
@@ -943,7 +1372,7 @@ class _LiveCoachVideoCallScreenState extends State<LiveCoachVideoCallScreen> {
                                 SizedBox(width: 6),
                                 Text(
                                   'END LINK',
-                                  style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900, fontFamily: 'Roboto'),
+                                  style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
                                 ),
                               ],
                             ),
@@ -972,51 +1401,80 @@ class _CoachBookingBottomSheet extends StatefulWidget {
 }
 
 class _CoachBookingBottomSheetState extends State<_CoachBookingBottomSheet> {
-  int _selectedFocusIndex = 0;
-  int _selectedSlotIndex = 0;
-  bool _isBooking = false;
+  int _selectedTopicIndex = 0;
+  int _selectedSessionIndex = 0;
+  int _selectedResponseFormat = 0;
+  bool _isSubmitting = false;
+  final TextEditingController _doubtController = TextEditingController();
 
-  final List<String> _focusOptions = const [
-    '🏏 Bat Swing Arc & High Elbow Drive',
-    '⚡ Fast Bowling Seam & Kinetic Chain',
-    '🎯 Spin Rotation & Trajectory Analysis',
-    '📊 Match Situation Biomechanics Strategy',
+  final List<Map<String, String>> _topicOptions = const [
+    {
+      'title': '🏏 Batting Shot Correction',
+      'desc': 'Cover drive, pull shot, straight drive & edging issues',
+    },
+    {
+      'title': '⚡ Bat Speed & Power Hitting',
+      'desc': 'Swing speed, clearing the 30-yard/boundary & timing',
+    },
+    {
+      'title': '🦶 Footwork & Head Stability',
+      'desc': 'Front foot reach, balance & keeping head still',
+    },
+    {
+      'title': '🎯 Fast Bowling Pace & Seam',
+      'desc': 'Wrist snap, run-up rhythm & seam alignment',
+    },
+    {
+      'title': '🌀 Spin Bowling & Turn Variations',
+      'desc': 'Grip, release flight, revs & landing on good length',
+    },
+    {
+      'title': '📹 Review Recorded Session Video',
+      'desc': 'Frame-by-frame biomechanics critique of your overs',
+    },
   ];
 
-  final List<Map<String, String>> _slots = const [
-    {'date': 'Today', 'time': '06:00 PM - 07:00 PM', 'label': 'Evening Slot'},
-    {'date': 'Tomorrow', 'time': '09:30 AM - 10:30 AM', 'label': 'Morning Slot'},
-    {'date': 'Tomorrow', 'time': '05:00 PM - 06:00 PM', 'label': 'Prime Slot'},
-    {'date': '24 Sep', 'time': '07:00 PM - 08:00 PM', 'label': 'Night Radar'},
+  final List<String> _sessionOptions = const [
+    'Session 3 • Cover Drive Practice (3 Overs)',
+    'Session 2 • Pace Attack & Line (2 Overs)',
+    'Session 1 • Front-Foot Balance (4 Overs)',
+    'No Video (General Cricket Question)',
   ];
 
-  Future<void> _confirmBooking() async {
-    setState(() => _isBooking = true);
+  final List<String> _quickChips = const [
+    'Edging outswing balls',
+    'Bat turning in hand',
+    'Head falling over off-side',
+    'Front foot reaching too early',
+    'Bowling arm dropping early',
+  ];
+
+  @override
+  void dispose() {
+    _doubtController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitQuestion() async {
+    setState(() => _isSubmitting = true);
+    await Future.delayed(const Duration(milliseconds: 350));
     final coachName = widget.coach['name'] as String? ?? 'Coach Madhu';
     final coachHandle = widget.coach['handle'] as String? ?? '@coach.madhu';
-    final coachRole = widget.coach['role'] as String? ?? 'Mentor';
-    final slot = _slots[_selectedSlotIndex];
-    final focus = _focusOptions[_selectedFocusIndex];
+    final topic = _topicOptions[_selectedTopicIndex]['title']!;
+    final session = _sessionOptions[_selectedSessionIndex];
+    final questionText = _doubtController.text.trim();
 
-    final res = await ApiService().createBooking(
-      venueId: 'v1_coach',
-      date: '${slot['date']} • ${slot['time']}',
-      timeSlots: [slot['time']!],
-      totalAmount: 800.0,
-      paymentMethod: 'UPI',
-      athleteDetails: {
-        'coach': '$coachName ($coachRole)',
-        'coachHandle': coachHandle,
-        'focus': focus,
-        'lane': 'Private Mentorship Lane • 60FPS AI Camera',
-      },
+    DemoState().submitQuestion(
+      coachName: coachName,
+      coachHandle: coachHandle,
+      topic: topic,
+      question: questionText,
+      session: session,
     );
 
     if (!mounted) return;
-    setState(() => _isBooking = false);
+    setState(() => _isSubmitting = false);
     Navigator.pop(context); // Close sheet
-
-    final bookingId = res['booking']?['bookingId'] ?? 'HEX-CH${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
 
     // Show Confirmed Success Dialog
     showDialog(
@@ -1026,16 +1484,16 @@ class _CoachBookingBottomSheetState extends State<_CoachBookingBottomSheet> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: Row(
           children: const [
-            Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 28),
+            Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 28),
             SizedBox(width: 10),
             Expanded(
               child: Text(
-                '1-on-1 Session Confirmed!',
+                'Question Sent to Coach!',
                 style: TextStyle(
                   fontSize: 16.5,
                   fontWeight: FontWeight.w900,
                   color: AppTheme.navyBlue,
-                  fontFamily: 'Roboto',
+                  
                 ),
               ),
             ),
@@ -1084,36 +1542,37 @@ class _CoachBookingBottomSheetState extends State<_CoachBookingBottomSheet> {
                     ],
                   ),
                   const Divider(height: 18),
-                  Text('• Pass ID: $bookingId', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: AppTheme.electricBlue)),
-                  const SizedBox(height: 3),
-                  Text('• Timing: ${slot['date']} • ${slot['time']}', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppTheme.navyBlue)),
-                  const SizedBox(height: 3),
-                  Text('• Topic: $focus', style: const TextStyle(fontSize: 11.5, color: AppTheme.slateBlue)),
-                  const SizedBox(height: 3),
-                  const Text('• Arena: Hexgen Sports Arena (Private Bay 01)', style: TextStyle(fontSize: 11.5, color: AppTheme.slateBlue)),
+                  Text('• Topic: $topic', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: AppTheme.navyBlue)),
+                  const SizedBox(height: 4),
+                  Text('• Attached: $session', style: const TextStyle(fontSize: 11.5, color: AppTheme.electricBlue, fontWeight: FontWeight.w700)),
+                  if (questionText.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text('• Doubt: "$questionText"', style: const TextStyle(fontSize: 11.5, color: AppTheme.slateBlue, fontStyle: FontStyle.italic)),
+                  ],
+                  const SizedBox(height: 8),
+                  const Text('⏱️ Coach will analyze your video & telemetry and send feedback to the Feedback tab.', style: TextStyle(fontSize: 11, color: Color(0xFF059669), fontWeight: FontWeight.w700)),
                 ],
               ),
             ),
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Dismiss', style: TextStyle(color: AppTheme.slateBlue, fontWeight: FontWeight.bold)),
-          ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const MyBookingsScreen()),
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Question submitted to Coach ⚡ Check Coach Feedback tab'),
+                  behavior: SnackBarBehavior.floating,
+                  backgroundColor: AppTheme.navyBlue,
+                ),
               );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.electricBlue,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('View in My Bookings ⚡', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+            child: const Text('GOT IT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
           ),
         ],
       ),
@@ -1171,7 +1630,7 @@ class _CoachBookingBottomSheetState extends State<_CoachBookingBottomSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          coachName,
+                          'Ask $coachName',
                           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: AppTheme.navyBlue),
                         ),
                         Text(
@@ -1189,31 +1648,58 @@ class _CoachBookingBottomSheetState extends State<_CoachBookingBottomSheet> {
               ],
             ),
             const SizedBox(height: 18),
+
+            // 1. SELECT CRICKET TECHNIQUE TOPIC
             const Text(
-              '1. SELECT SESSION FOCUS',
+              '1. WHAT DO YOU NEED GUIDANCE ON?',
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AppTheme.navyBlue, letterSpacing: 0.8),
             ),
             const SizedBox(height: 8),
-            ...List.generate(_focusOptions.length, (idx) {
-              final isSel = _selectedFocusIndex == idx;
+            ...List.generate(_topicOptions.length, (idx) {
+              final isSel = _selectedTopicIndex == idx;
+              final opt = _topicOptions[idx];
               return GestureDetector(
-                onTap: () => setState(() => _selectedFocusIndex = idx),
+                onTap: () => setState(() => _selectedTopicIndex = idx),
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: isSel ? const Color(0xFFE0F2FE) : AppTheme.iceBlue,
+                    color: isSel ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isSel ? AppTheme.electricBlue : AppTheme.cardBorderColor, width: isSel ? 1.5 : 1.0),
+                    border: Border.all(
+                      color: isSel ? AppTheme.electricBlue : AppTheme.cardBorderColor,
+                      width: isSel ? 1.5 : 1.0,
+                    ),
                   ),
                   child: Row(
                     children: [
-                      Icon(isSel ? Icons.radio_button_checked : Icons.radio_button_off, size: 16, color: isSel ? AppTheme.electricBlue : AppTheme.slateBlue),
+                      Icon(
+                        isSel ? Icons.radio_button_checked : Icons.radio_button_off,
+                        size: 16,
+                        color: isSel ? AppTheme.electricBlue : AppTheme.slateBlue,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: Text(
-                          _focusOptions[idx],
-                          style: TextStyle(fontSize: 12, fontWeight: isSel ? FontWeight.w800 : FontWeight.w600, color: AppTheme.navyBlue),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              opt['title']!,
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: isSel ? FontWeight.w800 : FontWeight.w700,
+                                color: AppTheme.navyBlue,
+                              ),
+                            ),
+                            const SizedBox(height: 1),
+                            Text(
+                              opt['desc']!,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: isSel ? AppTheme.electricBlue : AppTheme.slateBlue,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -1221,71 +1707,194 @@ class _CoachBookingBottomSheetState extends State<_CoachBookingBottomSheet> {
                 ),
               );
             }),
+
             const SizedBox(height: 14),
+
+            // 2. ATTACH RECORDED SESSION (OPTIONAL)
             const Text(
-              '2. SELECT TIME SLOT',
+              '2. ATTACH A SESSION / OVER (OPTIONAL)',
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AppTheme.navyBlue, letterSpacing: 0.8),
             ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: List.generate(_slots.length, (idx) {
-                final isSel = _selectedSlotIndex == idx;
-                final slot = _slots[idx];
+              children: List.generate(_sessionOptions.length, (idx) {
+                final isSel = _selectedSessionIndex == idx;
+                final session = _sessionOptions[idx];
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedSlotIndex = idx),
+                  onTap: () => setState(() => _selectedSessionIndex = idx),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: isSel ? AppTheme.electricBlue : Colors.white,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: isSel ? AppTheme.electricBlue : AppTheme.cardBorderColor),
+                      border: Border.all(
+                        color: isSel ? AppTheme.electricBlue : AppTheme.cardBorderColor,
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          slot['date']!,
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: isSel ? Colors.white70 : AppTheme.slateBlue),
-                        ),
-                        Text(
-                          slot['time']!,
-                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: isSel ? Colors.white : AppTheme.navyBlue),
-                        ),
-                      ],
+                    child: Text(
+                      session,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: isSel ? Colors.white : AppTheme.navyBlue,
+                      ),
                     ),
                   ),
                 );
               }),
             ),
-            const SizedBox(height: 18),
+
+            const SizedBox(height: 16),
+
+            // 3. DESCRIBE YOUR CRICKET DOUBT
+            const Text(
+              '3. DESCRIBE YOUR SPECIFIC PROBLEM OR QUESTION',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AppTheme.navyBlue, letterSpacing: 0.8),
+            ),
+            const SizedBox(height: 8),
             Container(
-              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: const Color(0xFFF8FAFC),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppTheme.cardBorderColor),
               ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('1-on-1 Mentorship Fee', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.navyBlue)),
-                      Text('Includes 60fps AI Pose report', style: TextStyle(fontSize: 9.5, color: AppTheme.slateBlue)),
-                    ],
-                  ),
-                  Text('₹ 800', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: AppTheme.electricBlue)),
-                ],
+              child: TextField(
+                controller: _doubtController,
+                maxLines: 3,
+                style: const TextStyle(fontSize: 12.5, color: AppTheme.navyBlue),
+                decoration: const InputDecoration(
+                  hintText: 'e.g. My front foot reaches too early in cover drives and I keep getting caught at slips. How do I keep my head stable?',
+                  hintStyle: TextStyle(fontSize: 11.5, color: AppTheme.slateBlue, height: 1.4),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.all(12),
+                ),
               ),
             ),
-            const SizedBox(height: 18),
+
+            const SizedBox(height: 8),
+            // Quick suggestion chips
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _quickChips.map((chip) {
+                  return GestureDetector(
+                    onTap: () {
+                      final current = _doubtController.text.trim();
+                      if (current.isEmpty) {
+                        _doubtController.text = chip;
+                      } else {
+                        _doubtController.text = '$current, $chip';
+                      }
+                      setState(() {});
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.add, size: 12, color: AppTheme.electricBlue),
+                          const SizedBox(width: 3),
+                          Text(
+                            chip,
+                            style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppTheme.electricBlue),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // 4. PREFERRED RESPONSE FORMAT
+            const Text(
+              '4. PREFERRED FEEDBACK FORMAT',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AppTheme.navyBlue, letterSpacing: 0.8),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedResponseFormat = 0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: _selectedResponseFormat == 0 ? const Color(0xFFEFF6FF) : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _selectedResponseFormat == 0 ? AppTheme.electricBlue : AppTheme.cardBorderColor,
+                          width: _selectedResponseFormat == 0 ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            '🎙️ Voice & Video',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w800,
+                              color: _selectedResponseFormat == 0 ? AppTheme.electricBlue : AppTheme.navyBlue,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          const Text('Detailed review', style: TextStyle(fontSize: 9.5, color: AppTheme.slateBlue)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedResponseFormat = 1),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: _selectedResponseFormat == 1 ? const Color(0xFFEFF6FF) : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _selectedResponseFormat == 1 ? AppTheme.electricBlue : AppTheme.cardBorderColor,
+                          width: _selectedResponseFormat == 1 ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            '💬 Text Notes',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w800,
+                              color: _selectedResponseFormat == 1 ? AppTheme.electricBlue : AppTheme.navyBlue,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          const Text('Quick pointers', style: TextStyle(fontSize: 9.5, color: AppTheme.slateBlue)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // CTA BUTTON
             HexgenButton(
-              text: _isBooking ? 'CONFIRMING WITH COACH...' : 'CONFIRM 1-ON-1 BOOKING ⚡',
-              icon: _isBooking ? null : Icons.flash_on_rounded,
-              onPressed: _isBooking ? null : _confirmBooking,
+              text: _isSubmitting ? 'SENDING QUESTION TO COACH...' : 'ASK COACH ⚡',
+              icon: _isSubmitting ? null : Icons.send_rounded,
+              onPressed: _isSubmitting ? null : _submitQuestion,
             ),
           ],
         ),

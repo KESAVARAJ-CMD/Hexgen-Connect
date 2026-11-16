@@ -26,7 +26,7 @@ class HexgenHeroCard extends StatelessWidget {
     this.ovrRating = 88,
   });
 
-  static const _fontFamily = 'Roboto';
+  static const _fontFamily = 'Inter';
 
   @override
   Widget build(BuildContext context) {

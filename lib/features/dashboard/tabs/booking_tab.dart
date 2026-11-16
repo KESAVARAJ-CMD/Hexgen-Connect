@@ -2,7 +2,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../../core/network/api_service.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../screens/venue_details_screen.dart';
 
 class BookingIntegrationTab extends StatefulWidget {
   const BookingIntegrationTab({super.key});
@@ -581,10 +580,8 @@ class _BookingIntegrationTabState extends State<BookingIntegrationTab> {
                 const SizedBox(height: 12),
                 GestureDetector(
                   onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const VenueDetailsScreen(),
-                      ),
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Booking is currently disabled.')),
                     );
                   },
                   child: Container(
@@ -638,10 +635,8 @@ class _BookingIntegrationTabState extends State<BookingIntegrationTab> {
       padding: const EdgeInsets.only(bottom: 12),
       child: GestureDetector(
         onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const VenueDetailsScreen(),
-            ),
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Booking is currently disabled.')),
           );
         },
         child: ClipRRect(
@@ -828,10 +823,8 @@ class _BookingIntegrationTabState extends State<BookingIntegrationTab> {
                   ),
                   GestureDetector(
                     onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const VenueDetailsScreen(),
-                        ),
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Booking is currently disabled.')),
                       );
                     },
                     child: Container(

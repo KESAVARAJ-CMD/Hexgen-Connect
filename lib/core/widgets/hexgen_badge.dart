@@ -77,9 +77,8 @@ class HexgenBadge extends StatelessWidget {
             style: TextStyle(
               color: fg,
               fontSize: fontSize,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.6,
-              fontFamily: 'Roboto',
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.4,
             ),
           ),
         ],

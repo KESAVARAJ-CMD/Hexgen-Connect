@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../widgets/cyber_controls.dart';
 
 class AppTheme {
@@ -12,7 +13,7 @@ class AppTheme {
   static const Color pureWhite = Color(0xFFFFFFFF);    // Cards, white text
   static const Color navyBlue = Color(0xFF102A63);     // Headings, primary text
   static const Color slateBlue = Color(0xFF647899);    // Descriptions, secondary text
-  static const Color cardBorderColor = Color(0xFFD6E4F8); // Clean Crisp Border for High Contrast
+  static const Color cardBorderColor = Color(0xFFE2E8F0); // Clean Slate 200 Border for High Contrast
   static const Color dotUnselected = Color(0xFFB9D5F0);  // Unselected pagination
 
   // Global App Background Pattern Image URL
@@ -48,7 +49,7 @@ class AppTheme {
   // ── Gradients ───────────────────────────────────────────────────────────────
   // Gradient 1: Primary CTA Button
   static const LinearGradient primaryCtaGradient = LinearGradient(
-    colors: [electricBlue, royalBlue, skyBlue],
+    colors: [Color(0xFF0044EB), Color(0xFF1E6FFF), Color(0xFF00D4FF)],
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
   );
@@ -73,8 +74,32 @@ class AppTheme {
   static const LinearGradient orangeGradient = primaryCtaGradient;
   static const LinearGradient cyberGradient = primaryCtaGradient;
 
+  // ── Standard Container Box Decoration across all screens ────────────────────
+  static BoxDecoration standardCardDecoration({
+    BorderRadius? borderRadius,
+    Color? borderColor,
+    Color? color,
+    List<BoxShadow>? boxShadow,
+  }) => BoxDecoration(
+    color: color ?? Colors.white,
+    borderRadius: borderRadius ?? BorderRadius.circular(16),
+    border: Border.all(
+      color: borderColor ?? cardBorderColor,
+      width: 1.1,
+    ),
+    boxShadow: boxShadow ?? [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: 0.03),
+        blurRadius: 10,
+        offset: const Offset(0, 3),
+      ),
+    ],
+  );
+
   // ── Theme Data ──────────────────────────────────────────────────────────────
   static ThemeData get lightTheme {
+    final baseTextTheme = GoogleFonts.interTextTheme();
+
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
@@ -85,16 +110,17 @@ class AppTheme {
         secondary: skyBlue,
         surface: pureWhite,
       ),
-      fontFamily: 'Roboto',
-      appBarTheme: const AppBarTheme(
+      fontFamily: GoogleFonts.inter().fontFamily,
+      textTheme: baseTextTheme,
+      appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: IconThemeData(color: navyBlue),
-        titleTextStyle: TextStyle(
+        iconTheme: const IconThemeData(color: navyBlue),
+        titleTextStyle: GoogleFonts.inter(
           color: navyBlue,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          fontFamily: 'Roboto',
+          fontSize: 19,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.3,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -105,10 +131,10 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(27),
           ),
-          textStyle: const TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'Roboto',
+          textStyle: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.2,
           ),
         ),
       ),
@@ -128,8 +154,8 @@ class AppTheme {
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: electricBlue, width: 1.8),
         ),
-        labelStyle: const TextStyle(color: slateBlue, fontSize: 14, fontFamily: 'Roboto'),
-        hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14, fontFamily: 'Roboto'),
+        labelStyle: GoogleFonts.inter(color: slateBlue, fontSize: 13, fontWeight: FontWeight.w500),
+        hintStyle: GoogleFonts.inter(color: const Color(0xFF94A3B8), fontSize: 13, fontWeight: FontWeight.w400),
       ),
       sliderTheme: const SliderThemeData(
         trackShape: GradientSliderTrackShape(),
@@ -192,4 +218,56 @@ class AppTheme {
       ],
     );
   }
+}
+
+// ── Unified Hexgen Clean Typography System (Instagram-Style Neat Hierarchy) ───
+class AppTypography {
+  AppTypography._();
+
+  /// ── 1. LARGE: Page / Screen Titles (e.g. "Settings and activity", "Previous Sessions")
+  static TextStyle pageTitle({Color color = AppTheme.navyBlue, double fontSize = 20}) => GoogleFonts.inter(
+    fontSize: fontSize,
+    fontWeight: FontWeight.w800,
+    color: color,
+    letterSpacing: -0.4,
+  );
+
+  /// ── 2. MEDIUM-LARGE: Section Headers / Group Titles (e.g. "Your account", "How you use Instagram")
+  static TextStyle sectionHeader({Color color = const Color(0xFF64748B), double fontSize = 12.5}) => GoogleFonts.inter(
+    fontSize: fontSize,
+    fontWeight: FontWeight.w700,
+    color: color,
+    letterSpacing: 0.1,
+  );
+
+  /// ── 3. MEDIUM: Row / Card Titles (e.g. "Saved", "Archive", "Notifications", "Cover Drive")
+  static TextStyle itemTitle({Color color = AppTheme.navyBlue, double fontSize = 14.5}) => GoogleFonts.inter(
+    fontSize: fontSize,
+    fontWeight: FontWeight.w700,
+    color: color,
+    letterSpacing: -0.1,
+  );
+
+  /// ── 4. SMALL: Subtitle / Descriptions (e.g. "Password, security, personal details...")
+  static TextStyle itemSubtitle({Color color = const Color(0xFF64748B), double fontSize = 12}) => GoogleFonts.inter(
+    fontSize: fontSize,
+    fontWeight: FontWeight.w400,
+    color: color,
+    height: 1.35,
+  );
+
+  /// ── 5. EXTRA SMALL: Badges, Meta, Tags (e.g. "3 Overs", "Not subscribed")
+  static TextStyle meta({Color color = const Color(0xFF64748B), FontWeight fontWeight = FontWeight.w600, double fontSize = 11}) => GoogleFonts.inter(
+    fontSize: fontSize,
+    fontWeight: fontWeight,
+    color: color,
+  );
+
+  /// ── 6. BUTTONS: Clean CTA Text
+  static TextStyle button({Color color = Colors.white, double fontSize = 13.5}) => GoogleFonts.inter(
+    fontSize: fontSize,
+    fontWeight: FontWeight.w700,
+    color: color,
+    letterSpacing: 0.2,
+  );
 }

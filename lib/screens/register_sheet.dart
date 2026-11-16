@@ -4,8 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/theme/app_theme.dart';
 import '../core/widgets/cyber_controls.dart';
-import '../features/dashboard/player_dashboard_screen.dart';
-import 'complete_profile_screen.dart';
+import 'otp_sheet.dart';
 
 class RegisterBottomSheet extends StatefulWidget {
   const RegisterBottomSheet({super.key});
@@ -40,11 +39,8 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
   }
 
   Future<void> _onContinue() async {
-    final phone = _phoneController.text.trim();
-    if (phone.length < 10) {
-      setState(() => _errorMessage = 'Please enter a valid 10-digit mobile number');
-      return;
-    }
+    final rawPhone = _phoneController.text.trim();
+    final phone = rawPhone.isNotEmpty ? rawPhone : '9886519422';
 
     setState(() {
       _isLoading = true;
@@ -52,7 +48,6 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
     });
 
     final prefs = await SharedPreferences.getInstance();
-    final isCompleted = prefs.getBool('is_profile_completed') ?? false;
 
     // Auto-generate unique Player ID for this athlete
     String playerId = prefs.getString('player_id') ?? '';
@@ -67,35 +62,12 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
 
     Navigator.pop(context); // Close Register Sheet
 
-    if (!isCompleted) {
-      // First time user: navigate directly to CompleteProfileScreen
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => CompleteProfileScreen(
-            initialPhone: phone,
-            initialPlayerId: playerId,
-          ),
-        ),
-      );
-    } else {
-      // Returning user: grant direct login access to PlayerDashboardScreen
-      final name = prefs.getString('player_name') ?? 'Karthik Raja';
-      await prefs.setBool('is_logged_in', true);
-      await prefs.setString('user_role', 'player');
-
-      if (!mounted) return;
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PlayerDashboardScreen(
-            playerName: name,
-            playerId: playerId,
-          ),
-        ),
-        (route) => false,
-      );
-    }
+    // Direct navigation without blocking validation
+    OtpBottomSheet.show(
+      context,
+      phoneNumber: phone,
+      playerId: playerId,
+    );
   }
 
   Future<void> _onGoogleContinue() async {
@@ -105,45 +77,26 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
     });
 
     final prefs = await SharedPreferences.getInstance();
-    final isCompleted = prefs.getBool('is_profile_completed') ?? false;
 
     String playerId = prefs.getString('player_id') ?? '';
     if (playerId.isEmpty) {
       playerId = 'HX-${1000 + Random().nextInt(9000)}';
       await prefs.setString('player_id', playerId);
     }
+    const phone = '9886519422';
+    await prefs.setString('player_phone', phone);
 
     if (!mounted) return;
     setState(() => _isLoading = false);
 
     Navigator.pop(context);
 
-    if (!isCompleted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => CompleteProfileScreen(
-            initialPlayerId: playerId,
-          ),
-        ),
-      );
-    } else {
-      final name = prefs.getString('player_name') ?? 'Karthik Raja';
-      await prefs.setBool('is_logged_in', true);
-      await prefs.setString('user_role', 'player');
-
-      if (!mounted) return;
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PlayerDashboardScreen(
-            playerName: name,
-            playerId: playerId,
-          ),
-        ),
-        (route) => false,
-      );
-    }
+    // Fixed Step 2: Open OTP Bottom Sheet every time
+    OtpBottomSheet.show(
+      context,
+      phoneNumber: phone,
+      playerId: playerId,
+    );
   }
 
   @override
@@ -198,16 +151,20 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
 
           // ── Mobile Number Input Box ───────────────────────────────────────
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            height: 54,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
-              color: AppTheme.pureWhite,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppTheme.skyBlue, width: 1.5),
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFFCBD5E1),
+                width: 1.3,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.electricBlue.withAlpha(12),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
@@ -227,7 +184,7 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
                 Container(
                   width: 1,
                   height: 24,
-                  color: AppTheme.cardBorderColor,
+                  color: const Color(0xFFCBD5E1),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -282,10 +239,18 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
               height: 52,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(26),
-                gradient: AppTheme.primaryCtaGradient,
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFF0044EB),
+                    Color(0xFF1E6FFF),
+                    Color(0xFF00D4FF),
+                  ],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.electricBlue.withAlpha(80),
+                    color: const Color(0xFF0044EB).withValues(alpha: 0.35),
                     blurRadius: 16,
                     offset: const Offset(0, 4),
                   ),
@@ -432,49 +397,56 @@ class _GoogleGLogoPainter extends CustomPainter {
     final double h = size.height;
     final center = Offset(w / 2, h / 2);
     final double radius = w / 2;
+    final double innerRadius = radius * 0.55;
+    final double barHeight = radius * 0.44;
 
-    // Blue Bar & Arc
-    final bluePaint = Paint()..color = const Color(0xFF4285F4);
-    final bluePath = Path()
-      ..moveTo(center.dx, center.dy)
-      ..lineTo(w, center.dy)
-      ..arcTo(Rect.fromCircle(center: center, radius: radius), 0, -3.14 * 0.4, false)
-      ..close();
-    canvas.drawPath(bluePath, bluePaint);
+    final circleRect = Rect.fromCircle(center: center, radius: radius);
 
-    // Red Top Arc
+    // 1. Red (Top Arc: 220° to 325°)
     final redPaint = Paint()..color = const Color(0xFFEA4335);
     final redPath = Path()
       ..moveTo(center.dx, center.dy)
-      ..arcTo(Rect.fromCircle(center: center, radius: radius), -3.14 * 0.4, -3.14 * 0.55, false)
+      ..arcTo(circleRect, 1.22 * 3.14159, 0.58 * 3.14159, false)
       ..close();
     canvas.drawPath(redPath, redPaint);
 
-    // Yellow Left Arc
+    // 2. Yellow (Left Arc: 140° to 220°)
     final yellowPaint = Paint()..color = const Color(0xFFFBBC05);
     final yellowPath = Path()
       ..moveTo(center.dx, center.dy)
-      ..arcTo(Rect.fromCircle(center: center, radius: radius), -3.14 * 0.95, -3.14 * 0.35, false)
+      ..arcTo(circleRect, 0.78 * 3.14159, 0.44 * 3.14159, false)
       ..close();
     canvas.drawPath(yellowPath, yellowPaint);
 
-    // Green Bottom Arc
+    // 3. Green (Bottom Arc: 45° to 140°)
     final greenPaint = Paint()..color = const Color(0xFF34A853);
     final greenPath = Path()
       ..moveTo(center.dx, center.dy)
-      ..arcTo(Rect.fromCircle(center: center, radius: radius), -3.14 * 1.30, -3.14 * 0.45, false)
+      ..arcTo(circleRect, 0.25 * 3.14159, 0.53 * 3.14159, false)
       ..close();
     canvas.drawPath(greenPath, greenPaint);
 
-    // Inner White Hole
-    final whitePaint = Paint()..color = Colors.white;
-    canvas.drawCircle(center, radius * 0.52, whitePaint);
+    // 4. Blue (Bottom-Right Arc: 0° to 45°)
+    final bluePaint = Paint()..color = const Color(0xFF4285F4);
+    final bluePath = Path()
+      ..moveTo(center.dx, center.dy)
+      ..arcTo(circleRect, 0.0, 0.25 * 3.14159, false)
+      ..close();
+    canvas.drawPath(bluePath, bluePaint);
 
-    // Inner Blue Horizontal Rect Line
-    final blueLinePaint = Paint()..color = const Color(0xFF4285F4);
+    // 5. Inner White Cutout
+    final whitePaint = Paint()..color = Colors.white;
+    canvas.drawCircle(center, innerRadius, whitePaint);
+
+    // 6. Blue Horizontal Crossbar (Center to Right Edge)
     canvas.drawRect(
-      Rect.fromLTWH(center.dx, center.dy - radius * 0.22, radius * 0.95, radius * 0.44),
-      blueLinePaint,
+      Rect.fromLTWH(
+        center.dx,
+        center.dy - barHeight / 2,
+        radius,
+        barHeight,
+      ),
+      bluePaint,
     );
   }
 

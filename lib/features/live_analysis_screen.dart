@@ -292,14 +292,9 @@ class _LiveAnalysisScreenState extends State<LiveAnalysisScreen> with SingleTick
                               Navigator.pop(context);
                             }
                           },
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
-                            ),
-                            child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                            child: Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
                           ),
                         ),
                         const SizedBox(width: 12),

@@ -47,11 +47,11 @@ class _ProgressScreenState extends State<ProgressScreen> {
             fontSize: 18,
             fontWeight: FontWeight.w900,
             color: AppTheme.navyBlue,
-            fontFamily: 'Roboto',
+            
           ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.navyBlue, size: 18),
+          icon: const Icon(Icons.arrow_back_rounded, color: AppTheme.navyBlue, size: 22),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -105,8 +105,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(coachName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: AppTheme.navyBlue, fontFamily: 'Roboto')),
-                    Text('$coachHandle • $dateStr • $sessionStr', style: const TextStyle(fontSize: 11, color: AppTheme.slateBlue, fontFamily: 'Roboto')),
+                    Text(coachName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: AppTheme.navyBlue)),
+                    Text('$coachHandle • $dateStr • $sessionStr', style: const TextStyle(fontSize: 11, color: AppTheme.slateBlue)),
                   ],
                 ),
               ),
@@ -128,9 +128,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('TECHNICAL FOCUS', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: AppTheme.electricBlue, letterSpacing: 0.8, fontFamily: 'Roboto')),
+                const Text('TECHNICAL FOCUS', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: AppTheme.electricBlue, letterSpacing: 0.8)),
                 const SizedBox(height: 4),
-                Text('“$focusText”', style: const TextStyle(fontSize: 12.5, color: AppTheme.navyBlue, fontStyle: FontStyle.italic, height: 1.4, fontFamily: 'Roboto')),
+                Text('“$focusText”', style: const TextStyle(fontSize: 12.5, color: AppTheme.navyBlue, fontStyle: FontStyle.italic, height: 1.4)),
               ],
             ),
           ),
@@ -152,7 +152,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
     if (_state.assignedCustomDrills.isEmpty) {
       return HexgenCard(
         padding: const EdgeInsets.all(20),
-        child: const Text('No custom drills assigned yet.', style: TextStyle(fontSize: 12, color: AppTheme.slateBlue, fontFamily: 'Roboto')),
+        child: const Text('No custom drills assigned yet.', style: TextStyle(fontSize: 12, color: AppTheme.slateBlue)),
       );
     }
 
@@ -174,8 +174,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(d['title'] ?? '', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppTheme.navyBlue, fontFamily: 'Roboto')),
-                      Text('${d['reps']} • Assigned by ${d['coach']}', style: const TextStyle(fontSize: 11, color: AppTheme.slateBlue, fontFamily: 'Roboto')),
+                      Text(d['title'] ?? '', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppTheme.navyBlue)),
+                      Text('${d['reps']} • Assigned by ${d['coach']}', style: const TextStyle(fontSize: 11, color: AppTheme.slateBlue)),
                     ],
                   ),
                 ),
@@ -225,10 +225,10 @@ class _ProgressScreenState extends State<ProgressScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('SESSION ${item['id']}', style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: AppTheme.electricBlue, letterSpacing: 0.8, fontFamily: 'Roboto')),
+                          Text('SESSION ${item['id']}', style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: AppTheme.electricBlue, letterSpacing: 0.8)),
                           const SizedBox(height: 3),
-                          Text(item['title'] as String, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: AppTheme.navyBlue, fontFamily: 'Roboto')),
-                          Text(item['desc'] as String, style: const TextStyle(fontSize: 12, color: AppTheme.slateBlue, fontWeight: FontWeight.w500, fontFamily: 'Roboto')),
+                          Text(item['title'] as String, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: AppTheme.navyBlue)),
+                          Text(item['desc'] as String, style: const TextStyle(fontSize: 12, color: AppTheme.slateBlue, fontWeight: FontWeight.w500)),
                         ],
                       ),
                     ),
@@ -248,7 +248,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
       children: [
         Container(width: 3, height: 12, decoration: BoxDecoration(color: AppTheme.electricBlue, borderRadius: BorderRadius.circular(2))),
         const SizedBox(width: 8),
-        Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppTheme.slateBlue, letterSpacing: 1.2, fontFamily: 'Roboto')),
+        Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppTheme.slateBlue, letterSpacing: 1.2)),
       ],
     );
   }

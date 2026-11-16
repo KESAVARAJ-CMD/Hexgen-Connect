@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/services/profile_image_service.dart';
 import '../core/theme/app_theme.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -14,9 +15,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _ageController = TextEditingController();
   final TextEditingController _bioController = TextEditingController();
 
   String _gender = 'Male';
+  String? _avatarPath;
+  String? _bannerPath;
+  String? _bannerPreset;
 
   @override
   void initState() {
@@ -36,8 +41,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
     _emailController.text = prefs.getString('player_email') ?? 'kesava.athlete@hexgen.pro';
     _phoneController.text = prefs.getString('player_phone') ?? '+91 98865 19422';
+    _gender = prefs.getString('player_gender') ?? 'Male';
+    _ageController.text = prefs.getString('player_age') ?? '';
     _bioController.text = prefs.getString('player_bio') ??
         'Cricket lover | Sports enthusiast |\nDream to play for India 🇮🇳';
+    _avatarPath = prefs.getString(ProfileImageService.avatarPrefKey);
+    _bannerPath = prefs.getString(ProfileImageService.bannerPrefKey);
+    _bannerPreset = prefs.getString(ProfileImageService.bannerPresetPrefKey) ?? 'night_lights';
     if (mounted) setState(() {});
   }
 
@@ -51,6 +61,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     await prefs.setString('player_name', effectiveName);
     await prefs.setString('player_email', _emailController.text.trim());
     await prefs.setString('player_phone', _phoneController.text.trim());
+    await prefs.setString('player_gender', _gender);
+    await prefs.setString('player_age', _ageController.text.trim());
     await prefs.setString('player_bio', _bioController.text.trim());
 
     if (!mounted) return;
@@ -73,6 +85,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _lastNameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _ageController.dispose();
     _bioController.dispose();
     super.dispose();
   }
@@ -113,9 +126,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: const [
                               Icon(
-                                Icons.arrow_back_ios_rounded,
+                                Icons.arrow_back_rounded,
                                 color: AppTheme.navyBlue,
-                                size: 18,
+                                size: 22,
                               ),
                               SizedBox(width: 4),
                               Text(
@@ -129,7 +142,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             ],
                           ),
                         ),
-                        _buildHexgenLogo(),
                         GestureDetector(
                           onTap: _saveProfile,
                           child: Container(
@@ -169,67 +181,139 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Avatar & Change Photo
-                          Center(
+                          // ── Realistic Cover Banner & Overlapping Avatar ──
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.04),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
                             child: Column(
                               children: [
-                                Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    Container(
-                                      width: 82,
-                                      height: 82,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: Colors.white,
-                                          width: 2.5,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: AppTheme.electricBlue.withAlpha(40),
-                                            blurRadius: 10,
-                                            offset: const Offset(0, 4),
+                                // Cover Banner
+                                ClipRRect(
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
+                                  child: Stack(
+                                    children: [
+                                      ProfileImageService.buildBanner(
+                                        bannerPath: _bannerPath,
+                                        bannerPreset: _bannerPreset,
+                                        height: 110,
+                                      ),
+                                      Positioned(
+                                        top: 10,
+                                        right: 10,
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            ProfileImageService.showBannerPickerSheet(
+                                              context: context,
+                                              onBannerUpdated: (val) {
+                                                _loadProfileData();
+                                              },
+                                            );
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                            decoration: BoxDecoration(
+                                              color: Colors.black.withValues(alpha: 0.5),
+                                              borderRadius: BorderRadius.circular(20),
+                                              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                                            ),
+                                            child: const Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.camera_alt_outlined, color: Colors.white, size: 13),
+                                                SizedBox(width: 4),
+                                                Text(
+                                                  'Edit Cover',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                        ],
-                                        image: const DecorationImage(
-                                          image: NetworkImage(
-                                            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
-                                          ),
-                                          fit: BoxFit.cover,
                                         ),
                                       ),
-                                    ),
-                                    Positioned(
-                                      bottom: 0,
-                                      right: 0,
-                                      child: Container(
-                                        width: 26,
-                                        height: 26,
-                                        decoration: BoxDecoration(
-                                          color: AppTheme.electricBlue,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: Colors.white,
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                        child: const Icon(
-                                          Icons.camera_alt_rounded,
-                                          color: Colors.white,
-                                          size: 14,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  'Change Profile Picture',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppTheme.electricBlue,
+
+                                // Overlapping Avatar
+                                Transform.translate(
+                                  offset: const Offset(0, -32),
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      ProfileImageService.showAvatarPickerSheet(
+                                        context: context,
+                                        onAvatarUpdated: (val) {
+                                          _loadProfileData();
+                                        },
+                                      );
+                                    },
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        ProfileImageService.buildAvatar(
+                                          avatarPath: _avatarPath,
+                                          displayName: _firstNameController.text.isNotEmpty
+                                              ? _firstNameController.text
+                                              : 'K',
+                                          size: 74,
+                                          borderWidth: 3,
+                                        ),
+                                        Positioned(
+                                          bottom: 0,
+                                          right: 0,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(5),
+                                            decoration: BoxDecoration(
+                                              color: AppTheme.electricBlue,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(color: Colors.white, width: 2),
+                                            ),
+                                            child: const Icon(
+                                              Icons.camera_alt_rounded,
+                                              color: Colors.white,
+                                              size: 13,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+
+                                Transform.translate(
+                                  offset: const Offset(0, -22),
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      ProfileImageService.showAvatarPickerSheet(
+                                        context: context,
+                                        onAvatarUpdated: (val) {
+                                          _loadProfileData();
+                                        },
+                                      );
+                                    },
+                                    child: const Text(
+                                      'Change Profile Picture',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppTheme.electricBlue,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -316,6 +400,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 },
                               ),
                             ),
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // Age Field
+                          _buildFieldLabel('Age'),
+                          const SizedBox(height: 6),
+                          _buildTextField(
+                            controller: _ageController,
+                            keyboardType: TextInputType.number,
                           ),
 
                           const SizedBox(height: 14),
@@ -462,31 +556,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Widget _buildGoogleGLogo() {
-    return Image.network(
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1200px-Google_%22G%22_logo.svg.png',
+    return SizedBox(
       width: 24,
       height: 24,
-      fit: BoxFit.contain,
-      errorBuilder: (context, error, stackTrace) => SizedBox(
-        width: 24,
-        height: 24,
-        child: CustomPaint(painter: _GoogleGLogoPainter()),
-      ),
-    );
-  }
-
-  Widget _buildHexgenLogo() {
-    return const Text(
-      'HEXGEN CONNECT',
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(
-        fontSize: 17,
-        fontWeight: FontWeight.w900,
-        color: AppTheme.navyBlue,
-        letterSpacing: 0.8,
-        fontFamily: 'Roboto',
-      ),
+      child: CustomPaint(painter: _GoogleGLogoPainter()),
     );
   }
 }
@@ -498,49 +571,56 @@ class _GoogleGLogoPainter extends CustomPainter {
     final double h = size.height;
     final center = Offset(w / 2, h / 2);
     final double radius = w / 2;
+    final double innerRadius = radius * 0.55;
+    final double barHeight = radius * 0.44;
 
-    // Blue Bar & Arc
-    final bluePaint = Paint()..color = const Color(0xFF4285F4);
-    final bluePath = Path()
-      ..moveTo(center.dx, center.dy)
-      ..lineTo(w, center.dy)
-      ..arcTo(Rect.fromCircle(center: center, radius: radius), 0, -3.14 * 0.4, false)
-      ..close();
-    canvas.drawPath(bluePath, bluePaint);
+    final circleRect = Rect.fromCircle(center: center, radius: radius);
 
-    // Red Top Arc
+    // 1. Red (Top Arc: 220° to 325°)
     final redPaint = Paint()..color = const Color(0xFFEA4335);
     final redPath = Path()
       ..moveTo(center.dx, center.dy)
-      ..arcTo(Rect.fromCircle(center: center, radius: radius), -3.14 * 0.4, -3.14 * 0.55, false)
+      ..arcTo(circleRect, 1.22 * 3.14159, 0.58 * 3.14159, false)
       ..close();
     canvas.drawPath(redPath, redPaint);
 
-    // Yellow Left Arc
+    // 2. Yellow (Left Arc: 140° to 220°)
     final yellowPaint = Paint()..color = const Color(0xFFFBBC05);
     final yellowPath = Path()
       ..moveTo(center.dx, center.dy)
-      ..arcTo(Rect.fromCircle(center: center, radius: radius), -3.14 * 0.95, -3.14 * 0.35, false)
+      ..arcTo(circleRect, 0.78 * 3.14159, 0.44 * 3.14159, false)
       ..close();
     canvas.drawPath(yellowPath, yellowPaint);
 
-    // Green Bottom Arc
+    // 3. Green (Bottom Arc: 45° to 140°)
     final greenPaint = Paint()..color = const Color(0xFF34A853);
     final greenPath = Path()
       ..moveTo(center.dx, center.dy)
-      ..arcTo(Rect.fromCircle(center: center, radius: radius), -3.14 * 1.30, -3.14 * 0.45, false)
+      ..arcTo(circleRect, 0.25 * 3.14159, 0.53 * 3.14159, false)
       ..close();
     canvas.drawPath(greenPath, greenPaint);
 
-    // Inner White Hole
-    final whitePaint = Paint()..color = Colors.white;
-    canvas.drawCircle(center, radius * 0.52, whitePaint);
+    // 4. Blue (Bottom-Right Arc: 0° to 45°)
+    final bluePaint = Paint()..color = const Color(0xFF4285F4);
+    final bluePath = Path()
+      ..moveTo(center.dx, center.dy)
+      ..arcTo(circleRect, 0.0, 0.25 * 3.14159, false)
+      ..close();
+    canvas.drawPath(bluePath, bluePaint);
 
-    // Inner Blue Horizontal Rect Line
-    final blueLinePaint = Paint()..color = const Color(0xFF4285F4);
+    // 5. Inner White Cutout
+    final whitePaint = Paint()..color = Colors.white;
+    canvas.drawCircle(center, innerRadius, whitePaint);
+
+    // 6. Blue Horizontal Crossbar (Center to Right Edge)
     canvas.drawRect(
-      Rect.fromLTWH(center.dx, center.dy - radius * 0.22, radius * 0.95, radius * 0.44),
-      blueLinePaint,
+      Rect.fromLTWH(
+        center.dx,
+        center.dy - barHeight / 2,
+        radius,
+        barHeight,
+      ),
+      bluePaint,
     );
   }
 

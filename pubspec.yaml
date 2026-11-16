@@ -40,6 +40,8 @@ dependencies:
   shared_preferences: ^2.5.6
   http: ^1.2.0
   url_launcher: ^6.3.1
+  qr_flutter: ^4.1.0
+  image_picker: ^1.2.4
 
 dev_dependencies:
   flutter_test:
@@ -71,6 +73,10 @@ flutter:
     - assets/logo.png
     - assets/player.png
     - assets/coach.png
+    - assets/cricket_ball.png
+    - assets/Bowler_icon.png
+    - assets/video_thumbnail.png
+    - assets/coaches/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

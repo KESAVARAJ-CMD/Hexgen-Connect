@@ -1,17 +1,24 @@
-// DEPRECATED / UNUSED: OTP verification flow bypassed per user specification.
-// Users now receive instant auto-generated Player ID and direct login access upon entering mobile number.
+import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import '../core/network/api_service.dart';
 import '../core/theme/app_theme.dart';
 import 'complete_profile_screen.dart';
 
-@Deprecated('OTP verification bypassed. Direct mobile login is now used.')
 class OtpBottomSheet extends StatefulWidget {
   final String phoneNumber;
-  const OtpBottomSheet({super.key, this.phoneNumber = '9886519422'});
+  final String playerId;
 
-  static void show(BuildContext context, {String phoneNumber = '9886519422'}) {
+  const OtpBottomSheet({
+    super.key,
+    this.phoneNumber = '9886519422',
+    this.playerId = 'HX-9821',
+  });
+
+  static void show(
+    BuildContext context, {
+    String phoneNumber = '9886519422',
+    String playerId = 'HX-9821',
+  }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -19,7 +26,10 @@ class OtpBottomSheet extends StatefulWidget {
       barrierColor: Colors.black.withValues(alpha: 0.4),
       builder: (context) => BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: OtpBottomSheet(phoneNumber: phoneNumber),
+        child: OtpBottomSheet(
+          phoneNumber: phoneNumber,
+          playerId: playerId,
+        ),
       ),
     );
   }
@@ -29,14 +39,44 @@ class OtpBottomSheet extends StatefulWidget {
 }
 
 class _OtpBottomSheetState extends State<OtpBottomSheet> {
+  static const int _otpLength = 6; // 6 OTP boxes
   final List<TextEditingController> _otpControllers =
-      List.generate(6, (_) => TextEditingController(text: ''));
-  final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
+      List.generate(_otpLength, (_) => TextEditingController(text: ''));
+  final List<FocusNode> _focusNodes =
+      List.generate(_otpLength, (_) => FocusNode());
+
   bool _isVerifying = false;
   String? _errorMessage;
 
+  // 30s Countdown timer for OTP resend
+  Timer? _countdownTimer;
+  int _secondsRemaining = 30;
+
+  @override
+  void initState() {
+    super.initState();
+    _startCountdown();
+  }
+
+  void _startCountdown() {
+    _countdownTimer?.cancel();
+    setState(() => _secondsRemaining = 30);
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_secondsRemaining > 0) {
+        setState(() => _secondsRemaining--);
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
   @override
   void dispose() {
+    _countdownTimer?.cancel();
     for (var controller in _otpControllers) {
       controller.dispose();
     }
@@ -46,36 +86,42 @@ class _OtpBottomSheetState extends State<OtpBottomSheet> {
     super.dispose();
   }
 
-  Future<void> _onVerify() async {
-    final enteredOtp = _otpControllers.map((c) => c.text).join();
-    if (enteredOtp.length < 6) {
-      setState(() => _errorMessage = 'Please enter all 6 digits of the OTP');
-      return;
-    }
+  void _onVerify() {
+    if (_isVerifying) return;
+    _isVerifying = true;
 
-    setState(() {
-      _isVerifying = true;
-      _errorMessage = null;
-    });
-
-    final res = await ApiService().verifyOtp(widget.phoneNumber, enteredOtp);
-
-    if (!mounted) return;
-
-    if (res['success'] == true) {
-      Navigator.pop(context); // Close OTP sheet
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const CompleteProfileScreen(),
+    Navigator.pop(context); // Close OTP sheet
+    // Step 3 -> Step 4: Fixed navigation to CompleteProfileScreen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CompleteProfileScreen(
+          initialPhone: widget.phoneNumber,
+          initialPlayerId: widget.playerId,
         ),
-      );
-    } else {
-      setState(() {
-        _isVerifying = false;
-        _errorMessage = res['message'] ?? 'Invalid OTP. Please try 123456';
-      });
-    }
+      ),
+    );
+  }
+
+  void _resendOtp() {
+    _startCountdown();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('New OTP sent to +91 ${widget.phoneNumber} (Demo: 123456)'),
+        backgroundColor: AppTheme.navyBlue,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _sendToMail() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('OTP sent to registered email! (Demo: 123456)'),
+        backgroundColor: AppTheme.navyBlue,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -105,11 +151,15 @@ class _OtpBottomSheetState extends State<OtpBottomSheet> {
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
                   color: AppTheme.navyBlue,
+                  letterSpacing: -0.3,
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.close_rounded,
-                    color: AppTheme.navyBlue, size: 22),
+                icon: const Icon(
+                  Icons.close_rounded,
+                  color: AppTheme.navyBlue,
+                  size: 22,
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
@@ -119,75 +169,95 @@ class _OtpBottomSheetState extends State<OtpBottomSheet> {
 
           // ── Enter OTP Label ──────────────────────────────────────────────
           const Text(
-            'Enter 6-Digit OTP',
+            'Enter OTP',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 12.5,
               fontWeight: FontWeight.w700,
               color: AppTheme.slateBlue,
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
-          // ── 6-Digit OTP Box Grid ──────────────────────────────────────────
+          // ── 6 Separate Individual OTP Containers ────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(
-              6,
+              _otpLength,
               (index) {
                 final isFocused = _focusNodes[index].hasFocus;
                 final isFilled = _otpControllers[index].text.isNotEmpty;
 
-                return Container(
-                  width: 46,
-                  height: 52,
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 48,
+                  height: 54,
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+                    color: isFocused
+                        ? const Color(0xFFEFF6FF)
+                        : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: isFocused || isFilled
+                      color: isFocused
                           ? AppTheme.electricBlue
-                          : AppTheme.skyBlue,
-                      width: isFocused || isFilled ? 1.8 : 1.2,
+                          : const Color(0xFFCBD5E1), // Clean light grey outline
+                      width: isFocused ? 1.8 : 1.2,
                     ),
-                    boxShadow: isFocused || isFilled
-                        ? [
-                            BoxShadow(
-                              color: AppTheme.electricBlue.withAlpha(20),
-                              blurRadius: 6,
-                            ),
-                          ]
-                        : [],
+                    boxShadow: [
+                      BoxShadow(
+                        color: isFocused
+                            ? const Color(0xFF0057FF).withValues(alpha: 0.12)
+                            : Colors.black.withValues(alpha: 0.03),
+                        blurRadius: isFocused ? 8 : 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  child: TextField(
-                    controller: _otpControllers[index],
-                    focusNode: _focusNodes[index],
-                    textAlign: TextAlign.center,
-                    keyboardType: TextInputType.number,
-                    maxLength: 1,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: AppTheme.navyBlue,
+                  child: Center(
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        if (!isFilled && !isFocused)
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF94A3B8),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        TextField(
+                          controller: _otpControllers[index],
+                          focusNode: _focusNodes[index],
+                          textAlign: TextAlign.center,
+                          keyboardType: TextInputType.number,
+                          maxLength: 1,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: AppTheme.navyBlue,
+                          ),
+                          decoration: const InputDecoration(
+                            counterText: '',
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          onChanged: (val) {
+                            setState(() {});
+                            if (val.isNotEmpty && index < _otpLength - 1) {
+                              _focusNodes[index + 1].requestFocus();
+                            } else if (val.isEmpty && index > 0) {
+                              _focusNodes[index - 1].requestFocus();
+                            }
+                            if (_otpControllers.every((c) => c.text.isNotEmpty)) {
+                              _onVerify();
+                            }
+                          },
+                        ),
+                      ],
                     ),
-                    decoration: const InputDecoration(
-                      counterText: '',
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    onChanged: (val) {
-                      setState(() {});
-                      if (val.isNotEmpty && index < 5) {
-                        _focusNodes[index + 1].requestFocus();
-                      } else if (val.isEmpty && index > 0) {
-                        _focusNodes[index - 1].requestFocus();
-                      }
-                      if (_otpControllers.every((c) => c.text.isNotEmpty)) {
-                        _onVerify();
-                      }
-                    },
                   ),
                 );
               },
@@ -212,7 +282,7 @@ class _OtpBottomSheetState extends State<OtpBottomSheet> {
 
           const SizedBox(height: 22),
 
-          // ── Verify CTA Button ─────────────────────────────────────────────
+          // ── Verify CTA Button (Screen 4: "Verify") ────────────────────────
           GestureDetector(
             onTap: _isVerifying ? null : _onVerify,
             child: Container(
@@ -240,31 +310,29 @@ class _OtpBottomSheetState extends State<OtpBottomSheet> {
                         ),
                       ),
                     )
-                  : const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Verify & Continue',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
+                  : const Center(
+                      child: Text(
+                        'Verify',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 0.3,
                         ),
-                        SizedBox(width: 8),
-                        Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
-                      ],
+                      ),
                     ),
             ),
           ),
 
           const SizedBox(height: 18),
 
-          // ── Resend Timer ──────────────────────────────────────────────────
-          const Center(
+          // ── Resend Timer: "Resend OTP in 00:30" ────────────────────────────
+          Center(
             child: Text(
-              'Resend OTP in 00:30',
-              style: TextStyle(
+              _secondsRemaining > 0
+                  ? 'Resend OTP in 00:${_secondsRemaining.toString().padLeft(2, '0')}'
+                  : 'Didn\'t receive OTP? You can now resend',
+              style: const TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.slateBlue,
@@ -289,13 +357,15 @@ class _OtpBottomSheetState extends State<OtpBottomSheet> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               GestureDetector(
-                onTap: () {},
-                child: const Text(
+                onTap: _secondsRemaining == 0 ? _resendOtp : null,
+                child: Text(
                   'Resend OTP',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.electricBlue,
+                    color: _secondsRemaining == 0
+                        ? AppTheme.electricBlue
+                        : AppTheme.slateBlue.withValues(alpha: 0.6),
                     decoration: TextDecoration.underline,
                   ),
                 ),
@@ -308,7 +378,7 @@ class _OtpBottomSheetState extends State<OtpBottomSheet> {
                 ),
               ),
               GestureDetector(
-                onTap: () {},
+                onTap: _sendToMail,
                 child: const Text(
                   'Send to mail',
                   style: TextStyle(

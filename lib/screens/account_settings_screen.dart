@@ -10,11 +10,8 @@ import '../core/widgets/hexgen_button.dart';
 import '../widgets/animated_bottom_nav_bar.dart';
 import '../widgets/share_bottom_sheet.dart';
 import 'home_dashboard_screen.dart';
-import 'my_bookings_screen.dart';
 import 'profile_screen.dart';
-import 'leaderboard_screen.dart';
-import 'advanced_settings_screen.dart';
-import '../features/onboarding/role_selection_screen.dart';
+import 'onboarding_screen.dart';
 
 class AccountSettingsScreen extends StatefulWidget {
   final bool showBottomNavBar;
@@ -90,9 +87,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                             child: const Padding(
                               padding: EdgeInsets.all(4),
                               child: Icon(
-                                Icons.arrow_back_ios_rounded,
+                                Icons.arrow_back_rounded,
                                 color: AppTheme.navyBlue,
-                                size: 20,
+                                size: 24,
                               ),
                             ),
                           ),
@@ -215,21 +212,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                             child: Column(
                               children: [
                                 _buildSettingItem(
-                                  icon: Icons.calendar_today_outlined,
-                                  iconBgColor: const Color(0xFFF3E8FF),
-                                  iconColor: const Color(0xFF9333EA),
-                                  title: 'My Bookings',
-                                  subtitle: 'View Transactions & Receipts',
-                                  onTap: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (context) => const MyBookingsScreen(),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                _buildDivider(),
-                                _buildSettingItem(
                                   icon: Icons.groups_outlined,
                                   iconBgColor: const Color(0xFFFCE7F3),
                                   iconColor: const Color(0xFFDB2777),
@@ -263,21 +245,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                                   title: 'Invite & Earn',
                                   subtitle: 'Earn 50 points by inviting your friends',
                                   onTap: () => ShareBottomSheet.show(context),
-                                ),
-                                _buildDivider(),
-                                _buildSettingItem(
-                                  icon: Icons.tune_rounded,
-                                  iconBgColor: const Color(0xFFDCFCE7),
-                                  iconColor: const Color(0xFF16A34A),
-                                  title: 'Advanced Settings',
-                                  subtitle: 'Ball speed, pitch surface & game mode',
-                                  onTap: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (context) => const AdvancedSettingsScreen(),
-                                      ),
-                                    );
-                                  },
                                 ),
                                 _buildDivider(),
                                 _buildSettingItem(
@@ -323,14 +290,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(builder: (context) => const HomeDashboardScreen()),
                     (route) => false,
-                  );
-                } else if (index == 1) {
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (context) => const LeaderboardScreen()),
-                  );
-                } else if (index == 2) {
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (context) => const MyBookingsScreen()),
                   );
                 }
               },
@@ -529,7 +488,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
               if (context.mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
-                    builder: (context) => const RoleSelectionScreen(),
+                    builder: (context) => const OnboardingScreen(),
                   ),
                   (route) => false,
                 );
@@ -563,7 +522,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
         fontWeight: FontWeight.w900,
         color: AppTheme.navyBlue,
         letterSpacing: 0.8,
-        fontFamily: 'Roboto',
+
       ),
     );
   }
@@ -682,7 +641,7 @@ class _TeamsBottomSheet extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                       color: AppTheme.navyBlue,
                       letterSpacing: 0.5,
-                      fontFamily: 'Roboto',
+              
                     ),
                   ),
                   Text(
@@ -813,7 +772,7 @@ class _PaymentWalletBottomSheet extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                   color: AppTheme.navyBlue,
                   letterSpacing: 0.5,
-                  fontFamily: 'Roboto',
+          
                 ),
               ),
               IconButton(
@@ -982,7 +941,7 @@ class _OffersBottomSheet extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                   color: AppTheme.navyBlue,
                   letterSpacing: 0.5,
-                  fontFamily: 'Roboto',
+          
                 ),
               ),
               IconButton(
@@ -1103,7 +1062,7 @@ class _PreferencesBottomSheetState extends State<_PreferencesBottomSheet> {
                   fontWeight: FontWeight.w900,
                   color: AppTheme.navyBlue,
                   letterSpacing: 0.5,
-                  fontFamily: 'Roboto',
+          
                 ),
               ),
               IconButton(
@@ -1218,7 +1177,7 @@ class _HelpSupportBottomSheet extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                       color: AppTheme.navyBlue,
                       letterSpacing: 0.5,
-                      fontFamily: 'Roboto',
+              
                     ),
                   ),
                   Text(

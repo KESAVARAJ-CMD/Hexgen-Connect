@@ -69,14 +69,10 @@ class _PlayerReviewsScreenState extends State<PlayerReviewsScreen> {
                         children: [
                           GestureDetector(
                             onTap: () => Navigator.pop(context),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                              ),
-                              child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
+                            behavior: HitTestBehavior.opaque,
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                              child: Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -88,7 +84,7 @@ class _PlayerReviewsScreenState extends State<PlayerReviewsScreen> {
                                 fontSize: 18,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: 0.5,
-                                fontFamily: 'Roboto',
+            
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -108,7 +104,7 @@ class _PlayerReviewsScreenState extends State<PlayerReviewsScreen> {
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.85),
                             fontSize: 11,
-                            fontFamily: 'Roboto',
+        
                           ),
                         ),
                       ),
@@ -165,7 +161,7 @@ class _PlayerReviewsScreenState extends State<PlayerReviewsScreen> {
                                 fontSize: 10,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: 0.5,
-                                fontFamily: 'Roboto',
+            
                               ),
                             ),
                           ),
@@ -186,7 +182,7 @@ class _PlayerReviewsScreenState extends State<PlayerReviewsScreen> {
                                 color: AppTheme.slateBlue,
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                fontFamily: 'Roboto',
+            
                               ),
                             ),
                           )
@@ -229,7 +225,7 @@ class _PlayerReviewsScreenState extends State<PlayerReviewsScreen> {
                                                           color: AppTheme.navyBlue,
                                                           fontSize: 15,
                                                           fontWeight: FontWeight.w900,
-                                                          fontFamily: 'Roboto',
+                                      
                                                         ),
                                                         overflow: TextOverflow.ellipsis,
                                                       ),
@@ -248,7 +244,7 @@ class _PlayerReviewsScreenState extends State<PlayerReviewsScreen> {
                                                     color: AppTheme.slateBlue,
                                                     fontSize: 11,
                                                     fontWeight: FontWeight.w600,
-                                                    fontFamily: 'Roboto',
+                                
                                                   ),
                                                   overflow: TextOverflow.ellipsis,
                                                 ),
@@ -275,7 +271,7 @@ class _PlayerReviewsScreenState extends State<PlayerReviewsScreen> {
                                                 fontSize: 9,
                                                 fontWeight: FontWeight.w900,
                                                 letterSpacing: 0.8,
-                                                fontFamily: 'Roboto',
+                            
                                               ),
                                             ),
                                             const SizedBox(height: 3),
@@ -286,7 +282,7 @@ class _PlayerReviewsScreenState extends State<PlayerReviewsScreen> {
                                                 fontSize: 12.5,
                                                 fontWeight: FontWeight.w700,
                                                 height: 1.3,
-                                                fontFamily: 'Roboto',
+                            
                                               ),
                                             ),
                                             const SizedBox(height: 10),
@@ -297,7 +293,7 @@ class _PlayerReviewsScreenState extends State<PlayerReviewsScreen> {
                                                 fontSize: 9,
                                                 fontWeight: FontWeight.w900,
                                                 letterSpacing: 0.8,
-                                                fontFamily: 'Roboto',
+                            
                                               ),
                                             ),
                                             const SizedBox(height: 3),
@@ -312,7 +308,7 @@ class _PlayerReviewsScreenState extends State<PlayerReviewsScreen> {
                                                       color: AppTheme.navyBlue,
                                                       fontSize: 12,
                                                       fontWeight: FontWeight.w800,
-                                                      fontFamily: 'Roboto',
+                                  
                                                     ),
                                                     overflow: TextOverflow.ellipsis,
                                                   ),

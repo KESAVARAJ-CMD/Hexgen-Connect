@@ -1,301 +1,328 @@
-import 'dart:math';
-import 'dart:ui' as ui;
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/theme/app_theme.dart';
 import '../core/widgets/cyber_glass_backdrop.dart';
-import '../features/onboarding/player_setup_sheet.dart';
-import 'complete_profile_screen.dart';
-import 'register_sheet.dart';
+import '../features/dashboard/player_dashboard_screen.dart';
+
+class ExistingPlayerData {
+  final String name;
+  final String stance; // e.g. "Right-handed", "Left-handed"
+  final String id;
+  final String avatarUrl;
+
+  const ExistingPlayerData({
+    required this.name,
+    required this.stance,
+    required this.id,
+    required this.avatarUrl,
+  });
+}
 
 class ContinueWithScreen extends StatefulWidget {
-  const ContinueWithScreen({super.key});
+  final String? playerName;
+  final String? playerId;
+
+  const ContinueWithScreen({
+    super.key,
+    this.playerName,
+    this.playerId,
+  });
 
   @override
   State<ContinueWithScreen> createState() => _ContinueWithScreenState();
 }
 
 class _ContinueWithScreenState extends State<ContinueWithScreen> {
-  void _openPlayerSetupBottomSheet() async {
+  static const String subProfilesPrefsKey = 'hexgen_sub_profiles_list_v1';
+
+  List<ExistingPlayerData> _players = [];
+  bool _isLoading = true;
+
+  // Preset default players matching the exact UI in the screenshot
+  final List<ExistingPlayerData> _defaultPlayers = const [
+    ExistingPlayerData(
+      name: 'Rahul kumar',
+      stance: 'Right-handed',
+      id: 'HX-9011',
+      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    ),
+    ExistingPlayerData(
+      name: 'Mahesh',
+      stance: 'Left-handed',
+      id: 'HX-9012',
+      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    ),
+    ExistingPlayerData(
+      name: 'vaishnav',
+      stance: 'Right-handed',
+      id: 'HX-9013',
+      avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    ),
+    ExistingPlayerData(
+      name: 'karthi',
+      stance: 'Left-handed',
+      id: 'HX-9014',
+      avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
+    ),
+    ExistingPlayerData(
+      name: 'John',
+      stance: 'Right-handed',
+      id: 'HX-9015',
+      avatarUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
+    ),
+    ExistingPlayerData(
+      name: 'Arjun',
+      stance: 'Left-handed',
+      id: 'HX-9016',
+      avatarUrl: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150&auto=format&fit=crop&q=80',
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlayers();
+  }
+
+  Future<void> _loadPlayers() async {
     final prefs = await SharedPreferences.getInstance();
-    final isCompleted = prefs.getBool('is_profile_completed') ?? false;
+    final List<ExistingPlayerData> list = [];
 
-    if (!mounted) return;
-
-    if (!isCompleted) {
-      String playerId = prefs.getString('player_id') ?? '';
-      if (playerId.isEmpty) {
-        playerId = 'HX-${1000 + Random().nextInt(9000)}';
-        await prefs.setString('player_id', playerId);
-      }
-      if (!mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => CompleteProfileScreen(initialPlayerId: playerId),
-        ),
-      );
-    } else {
-      final name = prefs.getString('player_name') ?? '';
-      final id = prefs.getString('player_id') ?? '';
-      if (!mounted) return;
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        barrierColor: Colors.black.withAlpha(90),
-        builder: (context) => BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: PlayerSetupBottomSheet(
-            selectedRoleTitle: name.isNotEmpty ? name : 'Athlete',
-            initialName: name,
-            initialId: id,
-          ),
+    // 1. If user just completed their profile, show them at the top!
+    final savedName = widget.playerName ?? prefs.getString('player_name');
+    final savedId = widget.playerId ?? prefs.getString('player_id') ?? 'HX-9821';
+    if (savedName != null && savedName.trim().isNotEmpty) {
+      list.add(
+        ExistingPlayerData(
+          name: savedName.trim(),
+          stance: 'Right-handed',
+          id: savedId,
+          avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
         ),
       );
     }
+
+    // 2. Load created sub profiles
+    final rawSubProfiles = prefs.getString(subProfilesPrefsKey);
+    if (rawSubProfiles != null && rawSubProfiles.isNotEmpty) {
+      try {
+        final List<dynamic> subList = jsonDecode(rawSubProfiles);
+        for (var sp in subList) {
+          final sName = sp['name'] as String? ?? 'Sub Player';
+          final sId = sp['id'] as String? ?? 'SUB-${sName.hashCode % 9000 + 1000}';
+          list.add(
+            ExistingPlayerData(
+              name: sName,
+              stance: 'Left-handed',
+              id: sId,
+              avatarUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80',
+            ),
+          );
+        }
+      } catch (_) {}
+    }
+
+    // 3. Add screenshot demo profiles (Rahul kumar, Mahesh, vaishnav, karthi, John, Arjun)
+    for (var def in _defaultPlayers) {
+      if (!list.any((p) => p.name.toLowerCase() == def.name.toLowerCase())) {
+        list.add(def);
+      }
+    }
+
+    setState(() {
+      _players = list;
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _selectPlayerAndNavigate(ExistingPlayerData player) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_logged_in', true);
+    await prefs.setBool('is_profile_completed', true);
+    await prefs.setString('user_role', 'player');
+    await prefs.setString('player_name', player.name);
+    await prefs.setString('player_id', player.id);
+
+    if (!mounted) return;
+
+    // Navigate to PlayerDashboardScreen with default Sessions Tab (initialIndex = 0)
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PlayerDashboardScreen(
+          playerName: player.name,
+          playerId: player.id,
+          initialIndex: 0,
+        ),
+      ),
+      (route) => false,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F7FF),
+      backgroundColor: Colors.transparent,
       body: CyberGlassBackdrop(
+        showOrbs: false,
         child: SafeArea(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top Bar
+              // ── Top Header Row: < Continue with ──────────────────────────────
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Row(
                   children: [
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppTheme.cardBorderColor, width: 1.2),
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_ios_rounded,
+                      behavior: HitTestBehavior.opaque,
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                        child: Icon(
+                          Icons.arrow_back_rounded,
                           color: AppTheme.navyBlue,
-                          size: 18,
+                          size: 24,
                         ),
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Account Setup',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: AppTheme.navyBlue,
-                          ),
-                        ),
-                        Text(
-                          'Step 3 of 3 • Link Login',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: AppTheme.slateBlue,
-                          ),
-                        ),
-                      ],
+                    const Text(
+                      'Continue with',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: AppTheme.navyBlue,
+                        letterSpacing: -0.3,
+                      ),
                     ),
                   ],
                 ),
               ),
 
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 10),
+              const SizedBox(height: 6),
 
-                      const Center(
-                        child: Text(
-                          'Connect Your Account',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            color: AppTheme.navyBlue,
-                          ),
-                        ),
+            // ── Existing Players List Cards ──────────────────────────────────
+            Expanded(
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor: AlwaysStoppedAnimation<Color>(AppTheme.electricBlue),
                       ),
-
-                      const SizedBox(height: 6),
-
-                      const Center(
-                        child: Text(
-                          'Link your account to save telemetry stats and match replays',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            color: AppTheme.slateBlue,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 28),
-
-                      // Google Option
-                      _buildAuthOptionCard(
-                        icon: Icons.g_mobiledata_rounded,
-                        title: 'Continue with Google',
-                        subtitle: 'Quick sign-in with Google account',
-                        color: const Color(0xFFEA4335),
-                        onTap: _openPlayerSetupBottomSheet,
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Phone Option
-                      _buildAuthOptionCard(
-                        icon: Icons.phone_iphone_rounded,
-                        title: 'Continue with Mobile Number',
-                        subtitle: 'Instant Mobile Login & Auto-ID',
-                        color: AppTheme.electricBlue,
-                        onTap: () => RegisterBottomSheet.show(context),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Guest Option
-                      _buildAuthOptionCard(
-                        icon: Icons.person_outline_rounded,
-                        title: 'Continue as Guest',
-                        subtitle: 'Quick setup with local profile',
-                        color: AppTheme.navyBlue,
-                        onTap: _openPlayerSetupBottomSheet,
-                      ),
-
-                      const SizedBox(height: 28),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Bottom Button
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: GestureDetector(
-                  onTap: _openPlayerSetupBottomSheet,
-                  child: Container(
-                    width: double.infinity,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(26),
-                      gradient: AppTheme.primaryCtaGradient,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.electricBlue.withAlpha(90),
-                          blurRadius: 18,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                      itemCount: _players.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final player = _players[index];
+                        return _buildPlayerCard(player);
+                      },
                     ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'COMPLETE SETUP & CALIBRATE',
-                          style: TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: 0.6,
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Icon(
-                          Icons.arrow_forward_rounded,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAuthOptionCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFD6E4F8), width: 1.2),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF0F2B5C).withValues(alpha: 0.08),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
             ),
           ],
         ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: color.withAlpha(20),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, color: color, size: 24),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.navyBlue,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          color: AppTheme.slateBlue,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: AppTheme.navyBlue,
-                  size: 20,
-                ),
-              ],
-            ),
+      ),
+    ),
+  );
+}
+
+  Widget _buildPlayerCard(ExistingPlayerData player) {
+    return GestureDetector(
+      onTap: () => _selectPlayerAndNavigate(player),
+      child: Container(
+        height: 74,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: const Color(0xFFE2E8F0),
+            width: 1.1,
           ),
-        );
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Avatar Circle
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFFFF7ED),
+                border: Border.all(
+                  color: const Color(0xFFFDE68A).withValues(alpha: 0.6),
+                  width: 1.5,
+                ),
+              ),
+              child: ClipOval(
+                child: Image.network(
+                  player.avatarUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Center(
+                    child: Text(
+                      player.name.isNotEmpty ? player.name[0].toUpperCase() : 'P',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFD97706),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 16),
+
+            // Name and Handedness
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    player.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1E293B),
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    player.stance,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Right Arrow Icon →
+            const Icon(
+              Icons.arrow_forward_rounded,
+              color: Color(0xFF475569),
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

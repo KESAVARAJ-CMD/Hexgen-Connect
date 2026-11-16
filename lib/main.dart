@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'core/network/api_service.dart';
 import 'core/theme/hexgen_theme.dart';
-import 'features/coach/coach_dashboard_screen.dart';
-import 'features/dashboard/player_dashboard_screen.dart';
-import 'features/onboarding/role_selection_screen.dart';
+import 'screens/onboarding_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,8 +22,8 @@ class HexgenConnectApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Apply GoogleFonts Roboto as the global text theme
-    final textTheme = GoogleFonts.robotoTextTheme(
+    // Apply GoogleFonts Inter as the global unified text theme (matching modern iOS/Instagram clean style)
+    final textTheme = GoogleFonts.interTextTheme(
       ThemeData.light().textTheme,
     );
 
@@ -54,53 +51,16 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Future<void> _checkLogin() async {
-    final prefs = await SharedPreferences.getInstance();
-    final isLoggedIn = prefs.getBool('is_logged_in') ?? false;
-    final role = prefs.getString('user_role');
-
     // Slight delay so the branded HexGen splash emblem displays smoothly
     await Future.delayed(const Duration(milliseconds: 900));
 
     if (!mounted) return;
 
-    if (isLoggedIn) {
-      if (role == 'coach') {
-        final coachName = prefs.getString('coach_name') ?? 'Coach Ken';
-        final academy = prefs.getString('coach_academy') ?? 'HexGen Sports Academy';
-        final coachId = prefs.getString('coach_id') ?? 'CH-4092';
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CoachDashboardScreen(
-              coachName: coachName,
-              academyName: academy,
-              coachId: coachId,
-            ),
-          ),
-        );
-        return;
-      } else {
-        // Player / Athlete
-        final playerName = prefs.getString('player_name') ?? 'Karthik Raja';
-        final playerId = prefs.getString('player_id') ?? 'HX-9821';
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PlayerDashboardScreen(
-              playerName: playerName,
-              playerId: playerId,
-            ),
-          ),
-        );
-        return;
-      }
-    }
-
-    // First time or logged out
+    // Development Mode: Always start screen-by-screen from OnboardingScreen
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => const RoleSelectionScreen(),
+        builder: (context) => const OnboardingScreen(),
       ),
     );
   }
@@ -140,25 +100,23 @@ class _AuthGateState extends State<AuthGate> {
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'HEXGEN CONNECT',
-              style: TextStyle(
+              style: GoogleFonts.inter(
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 2.0,
-                color: Color(0xFF0B192C),
-                fontFamily: 'Roboto',
+                color: const Color(0xFF0B192C),
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'AI SPORTS TELEMETRY & SMART ARENAS',
-              style: TextStyle(
+              style: GoogleFonts.inter(
                 fontSize: 10,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1.4,
-                color: Color(0xFF0066FF),
-                fontFamily: 'Roboto',
+                color: const Color(0xFF0066FF),
               ),
             ),
             const SizedBox(height: 32),

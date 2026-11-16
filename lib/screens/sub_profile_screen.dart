@@ -619,24 +619,13 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
                   children: [
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF1C3E78).withValues(alpha: 0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
+                      behavior: HitTestBehavior.opaque,
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                        child: Icon(
+                          Icons.arrow_back_rounded,
                           color: AppTheme.navyBlue,
-                          size: 18,
+                          size: 24,
                         ),
                       ),
                     ),

@@ -1,4 +1,3 @@
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/network/api_constants.dart';
@@ -6,7 +5,7 @@ import '../core/network/api_service.dart';
 import '../core/theme/app_theme.dart';
 import '../core/widgets/cyber_controls.dart';
 import '../core/widgets/cyber_glass_backdrop.dart';
-import '../features/onboarding/role_selection_screen.dart';
+import 'onboarding_screen.dart';
 
 class AdvancedSettingsScreen extends StatefulWidget {
   const AdvancedSettingsScreen({super.key});
@@ -111,30 +110,13 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
                   children: [
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: BackdropFilter(
-                          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.8),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.9)),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.navyBlue.withAlpha(12),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.arrow_back_ios_new_rounded,
-                              color: AppTheme.navyBlue,
-                              size: 16,
-                            ),
-                          ),
+                      behavior: HitTestBehavior.opaque,
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                        child: Icon(
+                          Icons.arrow_back_rounded,
+                          color: AppTheme.navyBlue,
+                          size: 24,
                         ),
                       ),
                     ),
@@ -149,7 +131,7 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
                             fontWeight: FontWeight.w900,
                             color: AppTheme.navyBlue,
                             letterSpacing: 0.8,
-                            fontFamily: 'Roboto',
+                    
                           ),
                         ),
                         Text(
@@ -311,7 +293,7 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
                                   fontWeight: FontWeight.w900,
                                   color: Colors.white,
                                   letterSpacing: 0.5,
-                                  fontFamily: 'Roboto',
+                          
                                 ),
                               ),
                             ],
@@ -359,7 +341,7 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
                     fontWeight: FontWeight.w800,
                     color: Color(0xFFDC2626),
                     letterSpacing: 0.6,
-                    fontFamily: 'Roboto',
+            
                   ),
                 ),
               ],
@@ -424,7 +406,7 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
               if (context.mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
-                    builder: (context) => const RoleSelectionScreen(),
+                    builder: (context) => const OnboardingScreen(),
                   ),
                   (route) => false,
                 );
@@ -456,7 +438,7 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
         fontWeight: FontWeight.w900,
         color: AppTheme.navyBlue,
         letterSpacing: 0.7,
-        fontFamily: 'Roboto',
+
       ),
     );
   }
@@ -757,7 +739,7 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
                           fontWeight: FontWeight.w900,
                           color: AppTheme.navyBlue,
                           letterSpacing: 0.5,
-                          fontFamily: 'Roboto',
+                  
                         ),
                       ),
                       Text(
@@ -824,7 +806,7 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.navyBlue,
-                      fontFamily: 'Roboto',
+              
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
