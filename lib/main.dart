@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'core/network/api_service.dart';
+import 'core/services/sessions_service.dart';
 import 'core/theme/hexgen_theme.dart';
+import 'features/dashboard/player_dashboard_screen.dart';
 import 'screens/onboarding_screen.dart';
 
 void main() async {
@@ -56,7 +59,42 @@ class _AuthGateState extends State<AuthGate> {
 
     if (!mounted) return;
 
-    // Development Mode: Always start screen-by-screen from OnboardingScreen
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final isLoggedIn = prefs.getBool('is_logged_in') ?? false;
+      final playerName = prefs.getString('player_name');
+      final playerId = prefs.getString('player_id');
+      final cloudPlayerId = prefs.getInt('cloud_player_id') ?? 0;
+      final phone = prefs.getString('player_phone') ?? '';
+
+      // If user has already logged in and selected a player profile, jump directly to Dashboard!
+      if (isLoggedIn && playerName != null && playerName.isNotEmpty && playerId != null) {
+        // Pre-fetch player sessions in background for snappy experience
+        SessionsService().clearAndFetchForPlayer(
+          mobileNumber: phone,
+          playerId: playerId,
+          numericPlayerId: cloudPlayerId,
+        );
+
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PlayerDashboardScreen(
+              playerName: playerName,
+              playerId: playerId,
+              initialIndex: 0,
+            ),
+          ),
+        );
+        return;
+      }
+    } catch (e) {
+      debugPrint('[AuthGate] Error checking login session: $e');
+    }
+
+    if (!mounted) return;
+    // If not logged in, take them to the initial onboarding screen
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(

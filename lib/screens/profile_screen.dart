@@ -9,10 +9,10 @@ import '../core/widgets/cyber_glass_backdrop.dart';
 import '../widgets/animated_bottom_nav_bar.dart';
 import '../widgets/athlete_story_viewer.dart';
 import 'account_settings_screen.dart';
-import 'continue_with_screen.dart';
 import 'edit_profile_screen.dart';
 import 'favorites_screen.dart';
 import 'home_dashboard_screen.dart';
+import 'onboarding_screen.dart';
 import 'sub_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -252,12 +252,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const ContinueWithScreen()),
-                (route) => false,
-              );
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.remove('is_logged_in');
+              await prefs.remove('player_name');
+              await prefs.remove('player_id');
+              await prefs.remove('cloud_player_id');
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+                  (route) => false,
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFE11D48),
@@ -762,11 +769,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const Divider(height: 1, indent: 64, color: Color(0xFFF1F5F9)),
                       _buildMenuItem(
-                        icon: Icons.people_outline_rounded,
-                        iconColor: const Color(0xFF0284C7),
-                        iconBg: const Color(0xFFE0F2FE),
-                        title: 'Sub Profiles',
-                        subtitle: 'Switch or manage linked cricket profiles',
+                        icon: Icons.switch_account_rounded,
+                        iconColor: const Color(0xFF0057FF),
+                        iconBg: const Color(0xFFEFF6FF),
+                        title: 'Switch Player Profile',
+                        subtitle: 'Quickly switch between registered cricketers',
                         onTap: () async {
                           await Navigator.push(
                             context,
