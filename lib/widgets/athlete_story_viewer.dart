@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import '../core/network/matrix_api_service.dart';
 import '../core/services/profile_image_service.dart';
 import '../core/theme/app_theme.dart';
 
@@ -13,6 +14,8 @@ class AthleteHighlightItem {
   final IconData icon;
   final List<Color> gradientColors;
   final String? videoAsset;
+  final String? videoPath;
+  final String? streamUrl;
 
   const AthleteHighlightItem({
     required this.id,
@@ -23,7 +26,9 @@ class AthleteHighlightItem {
     this.thumbnailUrl,
     required this.icon,
     required this.gradientColors,
-    this.videoAsset = 'assets/U15S125O3B1.mp4',
+    this.videoAsset,
+    this.videoPath,
+    this.streamUrl,
   });
 
   Map<String, dynamic> toJson() => {
@@ -37,6 +42,8 @@ class AthleteHighlightItem {
     'gradientColor1': gradientColors[0].toARGB32(),
     'gradientColor2': gradientColors[1].toARGB32(),
     'videoAsset': videoAsset,
+    'videoPath': videoPath,
+    'streamUrl': streamUrl,
   };
 
   factory AthleteHighlightItem.fromJson(Map<String, dynamic> json) => AthleteHighlightItem(
@@ -51,7 +58,9 @@ class AthleteHighlightItem {
       Color(json['gradientColor1'] as int? ?? 0xFF0052FF),
       Color(json['gradientColor2'] as int? ?? 0xFF00D2FF),
     ],
-    videoAsset: json['videoAsset'] as String? ?? 'assets/U15S125O3B1.mp4',
+    videoAsset: json['videoAsset'] as String?,
+    videoPath: json['videoPath'] as String?,
+    streamUrl: json['streamUrl'] as String?,
   );
 
   static IconData _iconFromCode(int? code) {
@@ -60,6 +69,164 @@ class AthleteHighlightItem {
     if (code == Icons.bolt_rounded.codePoint) return Icons.bolt_rounded;
     if (code == Icons.sports_cricket_rounded.codePoint) return Icons.sports_cricket_rounded;
     return Icons.sports_cricket_rounded;
+  }
+}
+
+/// ── Dynamic Freeze-Frame Thumbnail Bubble for Profile Highlights ─────────────
+class HighlightVideoFreezeBubble extends StatefulWidget {
+  final AthleteHighlightItem highlight;
+  final double size;
+
+  const HighlightVideoFreezeBubble({
+    super.key,
+    required this.highlight,
+    this.size = 54,
+  });
+
+  @override
+  State<HighlightVideoFreezeBubble> createState() => _HighlightVideoFreezeBubbleState();
+}
+
+class _HighlightVideoFreezeBubbleState extends State<HighlightVideoFreezeBubble> {
+  VideoPlayerController? _videoController;
+  bool _isInitialized = false;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initThumbnail();
+  }
+
+  @override
+  void didUpdateWidget(HighlightVideoFreezeBubble oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.highlight.videoPath != widget.highlight.videoPath ||
+        oldWidget.highlight.streamUrl != widget.highlight.streamUrl ||
+        oldWidget.highlight.videoAsset != widget.highlight.videoAsset) {
+      _disposeController();
+      _initThumbnail();
+    }
+  }
+
+  Future<void> _initThumbnail() async {
+    final videoPath = widget.highlight.videoPath;
+    var streamUrl = widget.highlight.streamUrl;
+    final asset = widget.highlight.videoAsset;
+
+    final hasVideo = (videoPath != null && videoPath.isNotEmpty) ||
+        (streamUrl != null && streamUrl.isNotEmpty) ||
+        (asset != null && asset.isNotEmpty);
+
+    if (!hasVideo) return;
+
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+
+    try {
+      if ((streamUrl == null || streamUrl.isEmpty) && videoPath != null && videoPath.isNotEmpty) {
+        streamUrl = await MatrixApiService().getPlaybackUrl(videoPath);
+      }
+
+      VideoPlayerController controller;
+      if (streamUrl != null && streamUrl.isNotEmpty) {
+        controller = VideoPlayerController.networkUrl(Uri.parse(streamUrl));
+      } else if (asset != null && asset.isNotEmpty) {
+        controller = VideoPlayerController.asset(asset);
+      } else {
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
+      await controller.initialize();
+      await controller.setVolume(0);
+      await controller.pause();
+
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+
+      setState(() {
+        _videoController = controller;
+        _isInitialized = true;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('[HighlightVideoFreezeBubble] Thumbnail error: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _disposeController() {
+    _videoController?.dispose();
+    _videoController = null;
+    _isInitialized = false;
+  }
+
+  @override
+  void dispose() {
+    _disposeController();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // 1. If video controller is ready, show frozen frame directly from the actual video!
+    if (_isInitialized && _videoController != null) {
+      return SizedBox(
+        width: widget.size,
+        height: widget.size,
+        child: ClipOval(
+          child: FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: _videoController!.value.size.width,
+              height: _videoController!.value.size.height,
+              child: VideoPlayer(_videoController!),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 2. If loading
+    if (_isLoading) {
+      return Container(
+        width: widget.size,
+        height: widget.size,
+        color: const Color(0xFFF1F5F9),
+        child: const Center(
+          child: SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Color(0xFF0057FF),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 3. Fallback when no video is attached: Bowler icon
+    return Container(
+      width: widget.size,
+      height: widget.size,
+      color: const Color(0xFFF8FAFC),
+      padding: const EdgeInsets.all(9),
+      child: Image.asset(
+        'assets/Bowler_icon.png',
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => const Icon(
+          Icons.sports_cricket_rounded,
+          color: Color(0xFF64748B),
+          size: 22,
+        ),
+      ),
+    );
   }
 }
 
@@ -132,25 +299,64 @@ class _AthleteStoryViewerState extends State<AthleteStoryViewer>
   }
 
   Future<void> _initVideo() async {
-    final asset = widget.highlight.videoAsset ?? 'assets/U15S125O3B1.mp4';
-    try {
-      final controller = VideoPlayerController.asset(asset);
-      _videoController = controller;
-      await controller.initialize();
-      await controller.setLooping(true);
-      await controller.setVolume(0.0); // Mute for story reel preview
-      await controller.play();
-      if (mounted) {
-        setState(() {
-          _isVideoInitialized = true;
-        });
-        _progressController.forward();
+    VideoPlayerController? controller;
+
+    // 1. Resolve Cloud Video Playback URL if videoPath or streamUrl is available
+    String? streamUrl = widget.highlight.streamUrl;
+    final videoPath = widget.highlight.videoPath;
+
+    if ((streamUrl == null || streamUrl.isEmpty) && videoPath != null && videoPath.isNotEmpty) {
+      try {
+        streamUrl = await MatrixApiService().getPlaybackUrl(videoPath);
+      } catch (e) {
+        debugPrint('[AthleteStoryViewer] Error resolving cloud video: $e');
       }
-    } catch (_) {
-      // If video asset is missing or error, still run the 5s telemetry story preview
-      if (mounted) {
-        _progressController.forward();
+    }
+
+    // 2. Try network streaming from Cloudflare R2
+    if (streamUrl != null && streamUrl.isNotEmpty) {
+      try {
+        controller = VideoPlayerController.networkUrl(Uri.parse(streamUrl));
+        _videoController = controller;
+        await controller.initialize();
+        await controller.setLooping(true);
+        await controller.setVolume(1.0);
+        await controller.play();
+        if (mounted) {
+          setState(() {
+            _isVideoInitialized = true;
+          });
+          _progressController.forward();
+        }
+        return;
+      } catch (e) {
+        debugPrint('[AthleteStoryViewer] Cloud stream error: $e');
       }
+    }
+
+    // 3. Fallback to asset if specified and not empty
+    final asset = widget.highlight.videoAsset;
+    if (asset != null && asset.isNotEmpty) {
+      try {
+        controller = VideoPlayerController.asset(asset);
+        _videoController = controller;
+        await controller.initialize();
+        await controller.setLooping(true);
+        await controller.setVolume(1.0);
+        await controller.play();
+        if (mounted) {
+          setState(() {
+            _isVideoInitialized = true;
+          });
+          _progressController.forward();
+        }
+        return;
+      } catch (_) {}
+    }
+
+    // 4. If no video is found or video failed to load, proceed with 5s telemetry preview
+    if (mounted) {
+      _progressController.forward();
     }
   }
 
@@ -420,7 +626,7 @@ class _AthleteStoryViewerState extends State<AthleteStoryViewer>
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _buildHudMetric('142.4', 'BALL SPEED', unit: 'km/h', color: const Color(0xFF00E5FF)),
+                          _buildHudMetric(speed.replaceAll(' km/h', ''), 'BALL SPEED', unit: 'km/h', color: const Color(0xFF00E5FF)),
                           _buildHudDivider(),
                           _buildHudMetric('94%', 'SWEET SPOT', color: const Color(0xFF10B981)),
                           _buildHudDivider(),
@@ -508,33 +714,42 @@ class _AthleteStoryViewerState extends State<AthleteStoryViewer>
   }
 
   Widget _buildTelemetryFallbackVisual() {
-    final thumb = widget.highlight.thumbnailUrl;
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (thumb != null && thumb.startsWith('http'))
-          Image.network(
-            thumb,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => const SizedBox(),
-          )
-        else
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-              ),
+        Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
             ),
           ),
-        Container(
-          color: Colors.black.withValues(alpha: 0.65),
         ),
         Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.1),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1.5),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Image.asset(
+                  'assets/Bowler_icon.png',
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.sports_cricket_rounded,
+                    color: Colors.white70,
+                    size: 38,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               Text(
                 widget.highlight.title,
                 style: const TextStyle(

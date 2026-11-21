@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../widgets/avatar_cropper_dialog.dart';
 import '../theme/app_theme.dart';
 
 class ProfileImageService {
@@ -11,19 +12,27 @@ class ProfileImageService {
 
   static final ImagePicker _picker = ImagePicker();
 
-  /// Pick avatar from camera or gallery
-  static Future<String?> pickAvatar(ImageSource source) async {
+  /// Pick avatar from camera or gallery and crop with interactive zoom
+  static Future<String?> pickAvatar(ImageSource source, {BuildContext? context}) async {
     try {
       final XFile? image = await _picker.pickImage(
         source: source,
-        maxWidth: 600,
-        maxHeight: 600,
-        imageQuality: 85,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 95,
       );
       if (image != null) {
+        String finalPath = image.path;
+        if (context != null && context.mounted) {
+          final cropped = await AvatarCropperDialog.show(context, File(image.path));
+          if (cropped == null) {
+            return null; // User cancelled cropper
+          }
+          finalPath = cropped;
+        }
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(avatarPrefKey, image.path);
-        return image.path;
+        await prefs.setString(avatarPrefKey, finalPath);
+        return finalPath;
       }
     } catch (_) {}
     return null;
@@ -118,7 +127,7 @@ class ProfileImageService {
                   color: const Color(0xFF0052FF),
                   onTap: () async {
                     Navigator.pop(ctx);
-                    final path = await pickAvatar(ImageSource.camera);
+                    final path = await pickAvatar(ImageSource.camera, context: context);
                     if (path != null) onAvatarUpdated(path);
                   },
                 ),
@@ -128,7 +137,7 @@ class ProfileImageService {
                   color: const Color(0xFF16A34A),
                   onTap: () async {
                     Navigator.pop(ctx);
-                    final path = await pickAvatar(ImageSource.gallery);
+                    final path = await pickAvatar(ImageSource.gallery, context: context);
                     if (path != null) onAvatarUpdated(path);
                   },
                 ),

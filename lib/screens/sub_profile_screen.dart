@@ -3,6 +3,8 @@ import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/network/matrix_api_service.dart';
+import '../core/services/sessions_service.dart';
 import '../core/theme/app_theme.dart';
 import '../core/widgets/cyber_glass_backdrop.dart';
 
@@ -15,6 +17,10 @@ class SubProfileItem {
   String age;
   String gender;
   String address;
+  String battingHand;
+  String skillLevel;
+  int totalSessions;
+  bool isCloudProfile;
 
   SubProfileItem({
     required this.id,
@@ -25,6 +31,10 @@ class SubProfileItem {
     required this.age,
     required this.gender,
     required this.address,
+    this.battingHand = 'Right Handed',
+    this.skillLevel = 'Club',
+    this.totalSessions = 0,
+    this.isCloudProfile = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -36,6 +46,10 @@ class SubProfileItem {
         'age': age,
         'gender': gender,
         'address': address,
+        'battingHand': battingHand,
+        'skillLevel': skillLevel,
+        'totalSessions': totalSessions,
+        'isCloudProfile': isCloudProfile,
       };
 
   factory SubProfileItem.fromJson(Map<String, dynamic> json) => SubProfileItem(
@@ -47,23 +61,35 @@ class SubProfileItem {
         age: json['age'] ?? '',
         gender: json['gender'] ?? '',
         address: json['address'] ?? '',
+        battingHand: json['battingHand'] ?? 'Right Handed',
+        skillLevel: json['skillLevel'] ?? 'Club',
+        totalSessions: json['totalSessions'] ?? 0,
+        isCloudProfile: json['isCloudProfile'] ?? false,
       );
 }
 
 class SubProfileScreen extends StatefulWidget {
-  const SubProfileScreen({super.key});
+  final VoidCallback? onProfileSwitched;
+
+  const SubProfileScreen({
+    super.key,
+    this.onProfileSwitched,
+  });
 
   @override
   State<SubProfileScreen> createState() => _SubProfileScreenState();
 }
 
 class _SubProfileScreenState extends State<SubProfileScreen> {
-  static const int maxProfiles = 4;
+  static const int maxProfiles = 6;
   static const String prefsKey = 'hexgen_sub_profiles_list_v1';
 
   List<SubProfileItem> _subProfiles = [];
   int _selectedIndex = 0;
   bool _isLoading = true;
+  String _activePlayerId = '';
+  String _activePlayerName = '';
+  String _activePhone = '';
 
   @override
   void initState() {
@@ -71,40 +97,215 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
     _loadProfilesFromPrefs();
   }
 
+  bool _isProfileActive(SubProfileItem profile) {
+    final pNum = int.tryParse(profile.playerId.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    final aNum = int.tryParse(_activePlayerId.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    if (pNum > 0 && aNum > 0) {
+      return pNum == aNum;
+    }
+    if (_activePlayerId.isNotEmpty && profile.playerId.trim().isNotEmpty) {
+      if (profile.playerId.trim().toLowerCase() == _activePlayerId.trim().toLowerCase()) {
+        return true;
+      }
+    }
+    // Strict guarantee: NEVER mark multiple profiles active! Match ONLY the single first instance
+    final firstMatch = _subProfiles.cast<SubProfileItem?>().firstWhere(
+      (p) => p?.name.trim().toLowerCase() == _activePlayerName.trim().toLowerCase(),
+      orElse: () => null,
+    );
+    if (firstMatch != null) {
+      return identical(profile, firstMatch);
+    }
+    return false;
+  }
+
   Future<void> _loadProfilesFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
+    final activePhone = prefs.getString('player_phone') ?? '';
+    final activeId = prefs.getString('player_id') ?? '';
+    final activeName = prefs.getString('player_name') ?? '';
+    final cloudPlayerId = prefs.getInt('cloud_player_id') ?? 0;
+
+    _activePhone = activePhone;
+    _activePlayerId = activeId;
+    _activePlayerName = activeName;
+
+    final List<SubProfileItem> loadedList = [];
+    final Set<String> seenIds = {};
+
+    // 1. Fetch real cloud profiles for this active mobile number from backend API!
+    if (activePhone.isNotEmpty) {
+      try {
+        final cloudPlayers = await MatrixApiService().fetchPlayersByMobile(activePhone);
+        for (final cp in cloudPlayers) {
+          final pId = 'HX-${cp.playerId.toString().padLeft(4, '0')}';
+          if (!seenIds.contains(pId)) {
+            seenIds.add(pId);
+            final hand = cp.battingHand.isNotEmpty ? cp.battingHand : 'Right';
+            final skill = cp.skillLevel.isNotEmpty ? cp.skillLevel : 'Club';
+            loadedList.add(
+              SubProfileItem(
+                id: cp.playerId.toString(),
+                name: cp.playerName,
+                playerId: pId,
+                email: '${cp.playerName.toLowerCase().replaceAll(RegExp(r'\s+'), '')}@hexgen.pro',
+                phone: cp.mobileNumber.isNotEmpty ? cp.mobileNumber : activePhone,
+                age: 'Athlete',
+                gender: '$hand Handed',
+                address: 'Hexgen Arena',
+                battingHand: '$hand Handed',
+                skillLevel: skill,
+                totalSessions: cp.totalSessions,
+                isCloudProfile: true,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint('[SubProfileScreen] Error fetching cloud players: $e');
+      }
+    }
+
+    // 2. Fetch locally saved sub-profiles from SharedPreferences
     final rawData = prefs.getString(prefsKey);
     if (rawData != null && rawData.isNotEmpty) {
       try {
         final List<dynamic> list = jsonDecode(rawData);
-        _subProfiles = list.map((e) => SubProfileItem.fromJson(e)).toList();
-      } catch (_) {
-        _subProfiles = [];
-      }
-    } else {
-      _subProfiles = [];
+        for (final item in list) {
+          final sp = SubProfileItem.fromJson(item);
+          if (!seenIds.contains(sp.playerId)) {
+            seenIds.add(sp.playerId);
+            loadedList.add(sp);
+          }
+        }
+      } catch (_) {}
     }
 
-    if (_selectedIndex >= _subProfiles.length) {
+    // 3. Fallback if still empty
+    if (loadedList.isEmpty && activeName.isNotEmpty) {
+      loadedList.add(
+        SubProfileItem(
+          id: activeId.isNotEmpty ? activeId : '1',
+          name: activeName,
+          playerId: activeId.isNotEmpty ? activeId : 'HX-1001',
+          email: '${activeName.toLowerCase().replaceAll(RegExp(r'\s+'), '')}@hexgen.pro',
+          phone: activePhone.isNotEmpty ? activePhone : '+91 98765 43210',
+          age: 'Athlete',
+          gender: 'Right Handed',
+          address: 'Hexgen Arena',
+          isCloudProfile: true,
+        ),
+      );
+    }
+
+    _subProfiles = loadedList;
+
+    // Resolve exact active profile
+    int foundIndex = -1;
+    for (int i = 0; i < _subProfiles.length; i++) {
+      final p = _subProfiles[i];
+      final pNum = int.tryParse(p.playerId.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      final aNum = int.tryParse(activeId.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      if (cloudPlayerId > 0 && pNum == cloudPlayerId) {
+        foundIndex = i;
+        break;
+      }
+      if (pNum > 0 && aNum > 0 && pNum == aNum) {
+        foundIndex = i;
+        break;
+      }
+      if (activeId.isNotEmpty && p.playerId.toLowerCase() == activeId.toLowerCase()) {
+        foundIndex = i;
+        break;
+      }
+    }
+
+    if (foundIndex == -1 && _subProfiles.isNotEmpty) {
+      final nameIndex = _subProfiles.indexWhere(
+        (p) => p.name.trim().toLowerCase() == activeName.trim().toLowerCase(),
+      );
+      foundIndex = nameIndex != -1 ? nameIndex : 0;
+    }
+
+    if (foundIndex != -1) {
+      _activePlayerId = _subProfiles[foundIndex].playerId;
+      _activePlayerName = _subProfiles[foundIndex].name;
+      _selectedIndex = foundIndex;
+      await prefs.setString('player_id', _activePlayerId);
+      await prefs.setString('player_name', _activePlayerName);
+      final pNum = int.tryParse(_activePlayerId.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      if (pNum > 0) await prefs.setInt('cloud_player_id', pNum);
+    } else if (_selectedIndex >= _subProfiles.length) {
       _selectedIndex = _subProfiles.isEmpty ? 0 : _subProfiles.length - 1;
     }
 
-    setState(() {
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _saveProfilesToPrefs() async {
     final prefs = await SharedPreferences.getInstance();
-    final rawData = jsonEncode(_subProfiles.map((p) => p.toJson()).toList());
+    // Only save non-cloud local profiles
+    final localProfiles = _subProfiles.where((p) => !p.isCloudProfile).toList();
+    final rawData = jsonEncode(localProfiles.map((p) => p.toJson()).toList());
     await prefs.setString(prefsKey, rawData);
+  }
+
+  Future<void> _switchToProfile(SubProfileItem profile) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('player_name', profile.name);
+    await prefs.setString('player_id', profile.playerId);
+    final pNum = int.tryParse(profile.playerId.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    if (pNum > 0) {
+      await prefs.setInt('cloud_player_id', pNum);
+    }
+    await prefs.setString('player_batting_style', profile.battingHand);
+    await prefs.setString('player_level', profile.skillLevel);
+
+    final phone = prefs.getString('player_phone') ?? profile.phone;
+    // Clear old sessions and fetch only this switched player's cloud sessions
+    SessionsService().clearAndFetchForPlayer(
+      mobileNumber: phone,
+      playerId: profile.playerId,
+      numericPlayerId: pNum,
+    );
+
+    setState(() {
+      _activePlayerId = profile.playerId;
+      _activePlayerName = profile.name;
+    });
+
+    widget.onProfileSwitched?.call();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('Active profile switched to ${profile.name}!'),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF0284C7),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   void _openCreateProfileModal() {
     if (_subProfiles.length >= maxProfiles) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Maximum 4 sub profiles reached! Delete one to create another.'),
+        SnackBar(
+          content: Text('Maximum $maxProfiles profiles reached!'),
           backgroundColor: AppTheme.navyBlue,
           behavior: SnackBarBehavior.floating,
         ),
@@ -112,14 +313,14 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
       return;
     }
 
-    final randomId = '#ON6-${1000 + Random().nextInt(9000)}';
+    final randomId = 'HX-${1000 + Random().nextInt(9000)}';
     final nameCtrl = TextEditingController();
     final idCtrl = TextEditingController(text: randomId);
     final emailCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController(text: _activePhone);
     final ageCtrl = TextEditingController();
-    final genderCtrl = TextEditingController();
-    final addressCtrl = TextEditingController();
+    final genderCtrl = TextEditingController(text: 'Right Handed');
+    final addressCtrl = TextEditingController(text: 'Hexgen Turf');
 
     showModalBottomSheet(
       context: context,
@@ -172,7 +373,7 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
                   children: [
                     Expanded(child: _buildSheetTextField('Age', ageCtrl, Icons.cake_outlined, hint: 'e.g. 24 Years')),
                     const SizedBox(width: 12),
-                    Expanded(child: _buildSheetTextField('Gender', genderCtrl, Icons.wc_rounded, hint: 'e.g. Male')),
+                    Expanded(child: _buildSheetTextField('Batting Style', genderCtrl, Icons.sports_cricket_rounded, hint: 'Right Handed')),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -200,10 +401,14 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
                         name: name,
                         playerId: idCtrl.text.trim().isEmpty ? randomId : idCtrl.text.trim(),
                         email: emailCtrl.text.trim().isEmpty ? 'Not provided' : emailCtrl.text.trim(),
-                        phone: phoneCtrl.text.trim().isEmpty ? 'Not provided' : phoneCtrl.text.trim(),
-                        age: ageCtrl.text.trim().isEmpty ? 'Not specified' : ageCtrl.text.trim(),
-                        gender: genderCtrl.text.trim().isEmpty ? 'Not specified' : genderCtrl.text.trim(),
-                        address: addressCtrl.text.trim().isEmpty ? 'Not provided' : addressCtrl.text.trim(),
+                        phone: phoneCtrl.text.trim().isEmpty ? _activePhone : phoneCtrl.text.trim(),
+                        age: ageCtrl.text.trim().isEmpty ? 'Athlete' : ageCtrl.text.trim(),
+                        gender: genderCtrl.text.trim().isEmpty ? 'Right Handed' : genderCtrl.text.trim(),
+                        address: addressCtrl.text.trim().isEmpty ? 'Hexgen Arena' : addressCtrl.text.trim(),
+                        battingHand: genderCtrl.text.trim().isEmpty ? 'Right Handed' : genderCtrl.text.trim(),
+                        skillLevel: 'Club',
+                        totalSessions: 0,
+                        isCloudProfile: false,
                       );
 
                       setState(() {
@@ -220,7 +425,7 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('Sub Profile "${newProfile.name}" created! (${_subProfiles.length}/$maxProfiles)'),
+                            content: Text('Sub Profile "${newProfile.name}" created!'),
                             backgroundColor: AppTheme.navyBlue,
                             behavior: SnackBarBehavior.floating,
                           ),
@@ -309,7 +514,7 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
                   children: [
                     Expanded(child: _buildSheetTextField('Age', ageCtrl, Icons.cake_outlined)),
                     const SizedBox(width: 12),
-                    Expanded(child: _buildSheetTextField('Gender', genderCtrl, Icons.wc_rounded)),
+                    Expanded(child: _buildSheetTextField('Batting Style', genderCtrl, Icons.sports_cricket_rounded)),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -368,6 +573,29 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
   }
 
   void _confirmDeleteProfile(SubProfileItem profile) {
+    if (profile.isCloudProfile) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          title: const Text('Cloud Profile', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.navyBlue)),
+          content: Text('"${profile.name}" is a registered profile synced with your mobile number from Hexgen Matrix Cloud. You can switch to this profile or any other profile anytime.'),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.electricBlue,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('OK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -591,6 +819,172 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
     );
   }
 
+  Widget _buildLinkedProfileCard(SubProfileItem profile, int index) {
+    final isActive = _isProfileActive(profile);
+    final isSelected = _selectedIndex == index;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedIndex = index;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFF0F9FF) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isActive
+                ? const Color(0xFF86EFAC)
+                : (isSelected ? const Color(0xFFBAE6FD) : const Color(0xFFE2E8F0)),
+            width: isActive || isSelected ? 1.5 : 1.0,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1C3E78).withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Avatar
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: isActive
+                      ? [const Color(0xFF34D399), const Color(0xFF059669)]
+                      : [const Color(0xFF60A5FA), const Color(0xFF2563EB)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  profile.name.isNotEmpty ? profile.name[0].toUpperCase() : 'P',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          profile.name,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.navyBlue,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (profile.isCloudProfile) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'CLOUD',
+                            style: TextStyle(
+                              fontSize: 8.5,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF2563EB),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '${profile.playerId} • ${profile.battingHand} • ${profile.totalSessions} ${profile.totalSessions == 1 ? "Session" : "Sessions"}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.slateBlue,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Action
+            if (isActive)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCFCE7),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF16A34A)),
+                    SizedBox(width: 4),
+                    Text(
+                      'Active',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF16A34A),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              SizedBox(
+                height: 32,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _selectedIndex = index;
+                    });
+                    _switchToProfile(profile);
+                  },
+                  icon: const Icon(Icons.swap_horiz_rounded, size: 14, color: Colors.white),
+                  label: const Text(
+                    'Switch',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.electricBlue,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -602,6 +996,7 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
 
     final hasProfiles = _subProfiles.isNotEmpty;
     final currentProfile = hasProfiles ? _subProfiles[_selectedIndex] : null;
+    final isCurrentActive = currentProfile != null && _isProfileActive(currentProfile);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -668,7 +1063,7 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
                 ),
               ),
 
-              // ── Sub-Profiles Selector Pill Tabs (Up to 4) ────────────────
+              // ── Sub-Profiles Selector Pill Tabs ────────────────
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 child: SingleChildScrollView(
@@ -680,7 +1075,7 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
                           onTap: () => setState(() => _selectedIndex = i),
                           child: Container(
                             margin: const EdgeInsets.only(right: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                             decoration: BoxDecoration(
                               color: _selectedIndex == i ? AppTheme.electricBlue : Colors.white.withValues(alpha: 0.65),
                               borderRadius: BorderRadius.circular(14),
@@ -712,6 +1107,24 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
                                     color: _selectedIndex == i ? Colors.white : AppTheme.navyBlue,
                                   ),
                                 ),
+                                if (_isProfileActive(_subProfiles[i])) ...[
+                                  const SizedBox(width: 5),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: _selectedIndex == i ? Colors.white.withValues(alpha: 0.25) : const Color(0xFFDCFCE7),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      'Active',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w900,
+                                        color: _selectedIndex == i ? Colors.white : const Color(0xFF16A34A),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -721,7 +1134,7 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
                         GestureDetector(
                           onTap: _openCreateProfileModal,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                             decoration: BoxDecoration(
                               color: const Color(0xFFE0F2FE),
                               borderRadius: BorderRadius.circular(14),
@@ -742,18 +1155,6 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
                                 ),
                               ],
                             ),
-                          ),
-                        )
-                      else
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Text(
-                            'Max (4/4)',
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.slateBlue),
                           ),
                         ),
                     ],
@@ -782,8 +1183,10 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
                                     padding: const EdgeInsets.all(4),
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      gradient: const LinearGradient(
-                                        colors: [Color(0xFFBAE6FD), Color(0xFF38BDF8)],
+                                      gradient: LinearGradient(
+                                        colors: isCurrentActive
+                                            ? [const Color(0xFF34D399), const Color(0xFF059669)]
+                                            : [const Color(0xFFBAE6FD), const Color(0xFF38BDF8)],
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
                                       ),
@@ -871,23 +1274,106 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
                               ),
                             ),
                             const SizedBox(height: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE0F2FE),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: const Color(0xFFBAE6FD)),
-                              ),
-                              child: Text(
-                                'Player ID: ${currentProfile.playerId}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF0284C7),
-                                  letterSpacing: 0.3,
+                            Wrap(
+                              alignment: WrapAlignment.center,
+                              spacing: 8,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE0F2FE),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: const Color(0xFFBAE6FD)),
+                                  ),
+                                  child: Text(
+                                    'Player ID: ${currentProfile.playerId}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF0284C7),
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ),
+                                if (currentProfile.isCloudProfile)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEFF6FF),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.cloud_done_rounded, size: 13, color: Color(0xFF2563EB)),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          'Cloud Synced',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w800,
+                                            color: Color(0xFF2563EB),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+
+                            // ── Active Indicator or Switch Button ───────────────
+                            if (isCurrentActive)
+                              Container(
+                                margin: const EdgeInsets.only(top: 10),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDCFCE7),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: const Color(0xFF86EFAC)),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.check_circle_rounded, size: 15, color: Color(0xFF16A34A)),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'CURRENT ACTIVE PROFILE',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w900,
+                                        color: Color(0xFF16A34A),
+                                        letterSpacing: 0.4,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            else
+                              Padding(
+                                padding: const EdgeInsets.only(top: 12),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  height: 46,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () => _switchToProfile(currentProfile),
+                                    icon: const Icon(Icons.swap_horiz_rounded, color: Colors.white, size: 20),
+                                    label: Text(
+                                      'Switch to ${currentProfile.name}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.electricBlue,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                      elevation: 0,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
 
                             const SizedBox(height: 20),
 
@@ -923,9 +1409,14 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
                                         const SizedBox(height: 16),
                                         _buildInfoRow(Icons.phone_rounded, currentProfile.phone),
                                         const SizedBox(height: 16),
-                                        _buildInfoRow(Icons.cake_outlined, currentProfile.age),
+                                        _buildInfoRow(Icons.sports_cricket_rounded, currentProfile.battingHand),
                                         const SizedBox(height: 16),
-                                        _buildInfoRow(Icons.transgender_rounded, currentProfile.gender),
+                                        _buildInfoRow(Icons.star_outline_rounded, currentProfile.skillLevel),
+                                        const SizedBox(height: 16),
+                                        _buildInfoRow(
+                                          Icons.history_rounded,
+                                          '${currentProfile.totalSessions} ${currentProfile.totalSessions == 1 ? "Session Played" : "Sessions Played"}',
+                                        ),
                                         const SizedBox(height: 16),
                                         _buildInfoRow(Icons.location_on_outlined, currentProfile.address, isMultiLine: true),
                                       ],
@@ -935,7 +1426,32 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
                               ),
                             ),
 
-                            const SizedBox(height: 16),
+                            // ── All Profiles on this Number Section ──────────────
+                            if (_subProfiles.length > 1) ...[
+                              const SizedBox(height: 24),
+                              Row(
+                                children: [
+                                  const Icon(Icons.people_alt_rounded, size: 18, color: AppTheme.navyBlue),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Other Profiles on this Number (${_subProfiles.length})',
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w900,
+                                      color: AppTheme.navyBlue,
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              for (int i = 0; i < _subProfiles.length; i++) ...[
+                                _buildLinkedProfileCard(_subProfiles[i], i),
+                                const SizedBox(height: 10),
+                              ],
+                            ],
+
+                            const SizedBox(height: 20),
 
                             // ── Action Item 1: Edit Profile ──────────────────────
                             _buildActionTile(
@@ -973,26 +1489,44 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
 
                             const SizedBox(height: 20),
 
-                            // ── Delete Sub Profile Button ────────────────────────
+                            // ── Delete / Status Button ───────────────────────────
                             GestureDetector(
                               onTap: () => _confirmDeleteProfile(currentProfile),
                               child: Container(
                                 width: double.infinity,
                                 padding: const EdgeInsets.symmetric(vertical: 12),
                                 decoration: BoxDecoration(
-                                  color: Colors.red.withValues(alpha: 0.08),
+                                  color: currentProfile.isCloudProfile
+                                      ? Colors.blue.withValues(alpha: 0.08)
+                                      : Colors.red.withValues(alpha: 0.08),
                                   borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
+                                  border: Border.all(
+                                    color: currentProfile.isCloudProfile
+                                        ? Colors.blue.withValues(alpha: 0.25)
+                                        : Colors.red.withValues(alpha: 0.25),
+                                  ),
                                 ),
-                                child: const Row(
+                                child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
-                                    SizedBox(width: 6),
+                                    Icon(
+                                      currentProfile.isCloudProfile
+                                          ? Icons.cloud_done_rounded
+                                          : Icons.delete_outline_rounded,
+                                      color: currentProfile.isCloudProfile
+                                          ? AppTheme.royalBlue
+                                          : Colors.redAccent,
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 6),
                                     Text(
-                                      'Delete This Sub Profile',
+                                      currentProfile.isCloudProfile
+                                          ? 'Hexgen Matrix Cloud Profile'
+                                          : 'Delete This Sub Profile',
                                       style: TextStyle(
-                                        color: Colors.redAccent,
+                                        color: currentProfile.isCloudProfile
+                                            ? AppTheme.royalBlue
+                                            : Colors.redAccent,
                                         fontSize: 12.5,
                                         fontWeight: FontWeight.w800,
                                       ),
@@ -1058,7 +1592,7 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
                     ),
                     const SizedBox(height: 18),
                     const Text(
-                      'No Sub Profiles Yet',
+                      'No Sub Profiles Found',
                       style: TextStyle(
                         fontSize: 19,
                         fontWeight: FontWeight.w900,
@@ -1067,7 +1601,7 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Create up to 4 sub profiles for your family members, youth athletes, or alternate personas to track personal stats and arena bookings.',
+                      'Profiles created on your mobile number in the One6 Bowling Machine will appear here automatically. You can also create sub profiles for family members.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 12.5,
@@ -1083,7 +1617,7 @@ class _SubProfileScreenState extends State<SubProfileScreen> {
                         onPressed: _openCreateProfileModal,
                         icon: const Icon(Icons.add_rounded, color: Colors.white),
                         label: const Text(
-                          'Create First Sub Profile (1/4)',
+                          'Create First Sub Profile',
                           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13.5),
                         ),
                         style: ElevatedButton.styleFrom(

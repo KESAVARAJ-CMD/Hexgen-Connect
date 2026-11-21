@@ -1,32 +1,37 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/network/matrix_api_service.dart';
+import '../core/services/sessions_service.dart';
 import '../core/theme/app_theme.dart';
 import '../core/widgets/cyber_glass_backdrop.dart';
 import '../features/dashboard/player_dashboard_screen.dart';
 
 class ExistingPlayerData {
   final String name;
-  final String stance; // e.g. "Right-handed", "Left-handed"
-  final String id;
-  final String avatarUrl;
+  final String stance; // e.g. "Beginner • Right Hand • 1 Session"
+  final String id; // e.g. "HX-0001"
+  final int rawPlayerId; // e.g. 1
+  final String? avatarUrl;
 
   const ExistingPlayerData({
     required this.name,
     required this.stance,
     required this.id,
-    required this.avatarUrl,
+    this.rawPlayerId = 0,
+    this.avatarUrl,
   });
 }
 
 class ContinueWithScreen extends StatefulWidget {
   final String? playerName;
   final String? playerId;
+  final String? phone;
 
   const ContinueWithScreen({
     super.key,
     this.playerName,
     this.playerId,
+    this.phone,
   });
 
   @override
@@ -34,50 +39,9 @@ class ContinueWithScreen extends StatefulWidget {
 }
 
 class _ContinueWithScreenState extends State<ContinueWithScreen> {
-  static const String subProfilesPrefsKey = 'hexgen_sub_profiles_list_v1';
-
   List<ExistingPlayerData> _players = [];
   bool _isLoading = true;
-
-  // Preset default players matching the exact UI in the screenshot
-  final List<ExistingPlayerData> _defaultPlayers = const [
-    ExistingPlayerData(
-      name: 'Rahul kumar',
-      stance: 'Right-handed',
-      id: 'HX-9011',
-      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    ),
-    ExistingPlayerData(
-      name: 'Mahesh',
-      stance: 'Left-handed',
-      id: 'HX-9012',
-      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    ),
-    ExistingPlayerData(
-      name: 'vaishnav',
-      stance: 'Right-handed',
-      id: 'HX-9013',
-      avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    ),
-    ExistingPlayerData(
-      name: 'karthi',
-      stance: 'Left-handed',
-      id: 'HX-9014',
-      avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
-    ),
-    ExistingPlayerData(
-      name: 'John',
-      stance: 'Right-handed',
-      id: 'HX-9015',
-      avatarUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
-    ),
-    ExistingPlayerData(
-      name: 'Arjun',
-      stance: 'Left-handed',
-      id: 'HX-9016',
-      avatarUrl: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150&auto=format&fit=crop&q=80',
-    ),
-  ];
+  String _activePhone = '';
 
   @override
   void initState() {
@@ -88,52 +52,52 @@ class _ContinueWithScreenState extends State<ContinueWithScreen> {
   Future<void> _loadPlayers() async {
     final prefs = await SharedPreferences.getInstance();
     final List<ExistingPlayerData> list = [];
+    final Set<String> seenIds = {};
 
-    // 1. If user just completed their profile, show them at the top!
-    final savedName = widget.playerName ?? prefs.getString('player_name');
-    final savedId = widget.playerId ?? prefs.getString('player_id') ?? 'HX-9821';
-    if (savedName != null && savedName.trim().isNotEmpty) {
-      list.add(
-        ExistingPlayerData(
-          name: savedName.trim(),
-          stance: 'Right-handed',
-          id: savedId,
-          avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-        ),
-      );
-    }
+    final activePhone = (widget.phone != null && widget.phone!.trim().isNotEmpty)
+        ? widget.phone!.trim()
+        : (prefs.getString('player_phone') ?? '');
 
-    // 2. Load created sub profiles
-    final rawSubProfiles = prefs.getString(subProfilesPrefsKey);
-    if (rawSubProfiles != null && rawSubProfiles.isNotEmpty) {
+    _activePhone = activePhone;
+
+    // Strictly Query Real Hexgen Matrix Cloud Backend for registered players on this mobile number!
+    // GET /api/matrix/players?mobile_number={mobile_number}
+    // No mock data, no local storage fallback profiles, strictly real cloud profiles!
+    if (activePhone.isNotEmpty) {
       try {
-        final List<dynamic> subList = jsonDecode(rawSubProfiles);
-        for (var sp in subList) {
-          final sName = sp['name'] as String? ?? 'Sub Player';
-          final sId = sp['id'] as String? ?? 'SUB-${sName.hashCode % 9000 + 1000}';
-          list.add(
-            ExistingPlayerData(
-              name: sName,
-              stance: 'Left-handed',
-              id: sId,
-              avatarUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80',
-            ),
-          );
+        final cloudPlayers = await MatrixApiService().fetchPlayersByMobile(activePhone);
+        for (final cp in cloudPlayers) {
+          final pId = 'HX-${cp.playerId.toString().padLeft(4, '0')}';
+          if (!seenIds.contains(pId)) {
+            seenIds.add(pId);
+            final hand = cp.battingHand.isNotEmpty
+                ? (cp.battingHand.toUpperCase() == 'RIGHT'
+                    ? 'Right Hand'
+                    : (cp.battingHand.toUpperCase() == 'LEFT' ? 'Left Hand' : cp.battingHand))
+                : 'Right Hand';
+            final skill = cp.skillLevel.isNotEmpty ? cp.skillLevel : 'Beginner';
+            final sessionText = '${cp.totalSessions} ${cp.totalSessions == 1 ? "Session" : "Sessions"}';
+            list.add(
+              ExistingPlayerData(
+                name: cp.playerName,
+                stance: '$skill • $hand • $sessionText',
+                id: pId,
+                rawPlayerId: cp.playerId,
+              ),
+            );
+          }
         }
-      } catch (_) {}
-    }
-
-    // 3. Add screenshot demo profiles (Rahul kumar, Mahesh, vaishnav, karthi, John, Arjun)
-    for (var def in _defaultPlayers) {
-      if (!list.any((p) => p.name.toLowerCase() == def.name.toLowerCase())) {
-        list.add(def);
+      } catch (e) {
+        debugPrint('[ContinueWithScreen] fetchPlayersByMobile error: $e');
       }
     }
 
-    setState(() {
-      _players = list;
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _players = list;
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _selectPlayerAndNavigate(ExistingPlayerData player) async {
@@ -143,6 +107,18 @@ class _ContinueWithScreenState extends State<ContinueWithScreen> {
     await prefs.setString('user_role', 'player');
     await prefs.setString('player_name', player.name);
     await prefs.setString('player_id', player.id);
+    await prefs.setInt('cloud_player_id', player.rawPlayerId);
+    final activePhone = _activePhone.isNotEmpty
+        ? _activePhone
+        : (widget.phone ?? prefs.getString('player_phone') ?? '');
+    await prefs.setString('player_phone', activePhone);
+
+    // Clear old sessions and load ONLY this selected player's cloud sessions
+    SessionsService().clearAndFetchForPlayer(
+      mobileNumber: activePhone,
+      playerId: player.id,
+      numericPlayerId: player.rawPlayerId,
+    );
 
     if (!mounted) return;
 
@@ -203,31 +179,94 @@ class _ContinueWithScreenState extends State<ContinueWithScreen> {
 
               const SizedBox(height: 6),
 
-            // ── Existing Players List Cards ──────────────────────────────────
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(AppTheme.electricBlue),
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                      itemCount: _players.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final player = _players[index];
-                        return _buildPlayerCard(player);
-                      },
-                    ),
-            ),
-          ],
+              // ── Cloud Players List Cards ──────────────────────────────────
+              Expanded(
+                child: _isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.electricBlue),
+                        ),
+                      )
+                    : _players.isEmpty
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 72,
+                                    height: 72,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEFF6FF),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: const Color(0xFFBFDBFE),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.cloud_off_rounded,
+                                      color: Color(0xFF0052FF),
+                                      size: 34,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    'No Cloud Profiles Found',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppTheme.navyBlue,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _activePhone.isNotEmpty
+                                        ? 'No players registered with +91 $_activePhone on Hexgen Matrix cloud.'
+                                        : 'No registered player profiles found for this account.',
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontSize: 13.5,
+                                      color: Color(0xFF64748B),
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  ElevatedButton.icon(
+                                    onPressed: () => Navigator.pop(context),
+                                    icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                                    label: const Text('Change Number'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF0052FF),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                            itemCount: _players.length,
+                            separatorBuilder: (_, _) => const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final player = _players[index];
+                              return _buildPlayerCard(player);
+                            },
+                          ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildPlayerCard(ExistingPlayerData player) {
     return GestureDetector(
@@ -252,39 +291,21 @@ class _ContinueWithScreenState extends State<ContinueWithScreen> {
         ),
         child: Row(
           children: [
-            // Avatar Circle
+            // Clean Gradient Avatar Circle with Player's Initial
             Container(
               width: 48,
               height: 48,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFFFFF7ED),
-                border: Border.all(
-                  color: const Color(0xFFFDE68A).withValues(alpha: 0.6),
-                  width: 1.5,
-                ),
               ),
               child: ClipOval(
-                child: Image.network(
-                  player.avatarUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Center(
-                    child: Text(
-                      player.name.isNotEmpty ? player.name[0].toUpperCase() : 'P',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFD97706),
-                      ),
-                    ),
-                  ),
-                ),
+                child: _buildAvatarImage(player),
               ),
             ),
 
             const SizedBox(width: 16),
 
-            // Name and Handedness
+            // Name and Handedness / Level / Sessions
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -304,6 +325,8 @@ class _ContinueWithScreenState extends State<ContinueWithScreen> {
                   const SizedBox(height: 3),
                   Text(
                     player.stance,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -321,6 +344,46 @@ class _ContinueWithScreenState extends State<ContinueWithScreen> {
               size: 20,
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAvatarImage(ExistingPlayerData player) {
+    if (player.avatarUrl != null && player.avatarUrl!.isNotEmpty) {
+      return Image.network(
+        player.avatarUrl!,
+        fit: BoxFit.cover,
+        width: 48,
+        height: 48,
+        errorBuilder: (context, error, stackTrace) => _fallbackLetterAvatar(player.name),
+      );
+    }
+
+    return _fallbackLetterAvatar(player.name);
+  }
+
+  Widget _fallbackLetterAvatar(String name) {
+    final initial = name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'P';
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF0052FF), Color(0xFF38BDF8)],
+        ),
+      ),
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(
+            fontSize: 19,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+          ),
         ),
       ),
     );

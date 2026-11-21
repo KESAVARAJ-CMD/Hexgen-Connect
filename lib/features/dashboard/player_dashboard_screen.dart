@@ -79,10 +79,12 @@ class _PlayerDashboardScreenState extends State<PlayerDashboardScreen> {
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       SessionsTab(
+          key: ValueKey('sessions_$_currentId'),
           isSubscribed: _isSubscribed,
           onUnlockSubscription: _onSubscribeSuccess),
       const CoachesTab(),
       ProfileScreen(
+        key: ValueKey('profile_$_currentId'),
         name: _currentName,
         id: _currentId,
         showTopBar: false,

@@ -724,7 +724,7 @@ class _CategoryLabel extends StatelessWidget {
 }
 
 class _OverCard extends StatelessWidget {
-  final Map<String, String> over;
+  final Map<String, dynamic> over;
   final Color accent;
   final String sessionTitle;
   final String lane;
@@ -738,11 +738,23 @@ class _OverCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasVideo = over['has_video'] == true || (over['video_path'] != null && (over['video_path'] as String).isNotEmpty);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () {
+          if (!hasVideo && over['video_path'] == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Video replay is uploading from the turf bowling machine. Detailed over telemetry is available above.'),
+                behavior: SnackBarBehavior.floating,
+                duration: Duration(seconds: 2),
+              ),
+            );
+            return;
+          }
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -753,6 +765,7 @@ class _OverCard extends StatelessWidget {
                 lane: lane,
                 speed: over['speed'] ?? '112 km/h',
                 ballsSummary: over['summary'] ?? '6 Balls',
+                videoPath: over['video_path'],
               ),
             ),
           );
@@ -788,48 +801,71 @@ class _OverCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      over['over']!,
+                      over['over'] as String? ?? 'Over',
                       style: const TextStyle(
                         fontWeight: FontWeight.w900,
                         color: AppTheme.navyBlue,
                         fontSize: 13.5,
-    
                       ),
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      over['summary'] ?? '6 Balls • Tap to watch video',
+                      over['summary'] as String? ?? '6 Balls • Tap to view over telemetry',
                       style: const TextStyle(
                         color: AppTheme.slateBlue,
                         fontSize: 11.5,
-    
                       ),
                     ),
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  gradient: AppTheme.primaryCtaGradient,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.play_arrow_rounded, color: Colors.white, size: 16),
-                    SizedBox(width: 2),
-                    Text(
-                      'Watch',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.bold,
+              if (hasVideo)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.primaryCtaGradient,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.play_arrow_rounded, color: Colors.white, size: 16),
+                      SizedBox(width: 2),
+                      Text(
+                        'Watch',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.videocam_off_outlined, color: AppTheme.slateBlue, size: 13),
+                      SizedBox(width: 4),
+                      Text(
+                        'No Video',
+                        style: TextStyle(
+                          color: AppTheme.slateBlue,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
         ),

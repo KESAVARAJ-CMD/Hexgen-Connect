@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -39,8 +38,16 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
   }
 
   Future<void> _onContinue() async {
-    final rawPhone = _phoneController.text.trim();
-    final phone = rawPhone.isNotEmpty ? rawPhone : '9886519422';
+    final rawPhone = _phoneController.text.trim().replaceAll(RegExp(r'\D'), '');
+    if (rawPhone.isEmpty) {
+      setState(() => _errorMessage = 'Please enter your 10-digit mobile number');
+      return;
+    }
+    if (rawPhone.length < 10) {
+      setState(() => _errorMessage = 'Please enter a valid 10-digit mobile number');
+      return;
+    }
+    final phone = rawPhone.length > 10 ? rawPhone.substring(rawPhone.length - 10) : rawPhone;
 
     setState(() {
       _isLoading = true;
@@ -48,13 +55,6 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
     });
 
     final prefs = await SharedPreferences.getInstance();
-
-    // Auto-generate unique Player ID for this athlete
-    String playerId = prefs.getString('player_id') ?? '';
-    if (playerId.isEmpty) {
-      playerId = 'HX-${1000 + Random().nextInt(9000)}';
-      await prefs.setString('player_id', playerId);
-    }
     await prefs.setString('player_phone', phone);
 
     if (!mounted) return;
@@ -66,7 +66,6 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
     OtpBottomSheet.show(
       context,
       phoneNumber: phone,
-      playerId: playerId,
     );
   }
 
@@ -77,13 +76,7 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
     });
 
     final prefs = await SharedPreferences.getInstance();
-
-    String playerId = prefs.getString('player_id') ?? '';
-    if (playerId.isEmpty) {
-      playerId = 'HX-${1000 + Random().nextInt(9000)}';
-      await prefs.setString('player_id', playerId);
-    }
-    const phone = '9886519422';
+    const phone = '9876543210';
     await prefs.setString('player_phone', phone);
 
     if (!mounted) return;
@@ -95,7 +88,6 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
     OtpBottomSheet.show(
       context,
       phoneNumber: phone,
-      playerId: playerId,
     );
   }
 

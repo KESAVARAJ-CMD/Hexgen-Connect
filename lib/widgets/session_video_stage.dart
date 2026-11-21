@@ -48,6 +48,14 @@ class _SessionVideoStageState extends State<SessionVideoStage> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _boot());
   }
 
+  @override
+  void didUpdateWidget(SessionVideoStage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.assetPath != widget.assetPath) {
+      _boot();
+    }
+  }
+
   Future<File> _materializeAsset(String assetPath) async {
     final bytes = await rootBundle.load(assetPath);
     final dir = await getTemporaryDirectory();
@@ -62,6 +70,17 @@ class _SessionVideoStageState extends State<SessionVideoStage> {
   }
 
   Future<void> _boot() async {
+    if (widget.assetPath.trim().isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _ready = false;
+        _playing = false;
+        _loading = false;
+        _error = 'No video found for this delivery.';
+      });
+      return;
+    }
+
     setState(() {
       _loading = true;
       _error = null;
@@ -70,6 +89,40 @@ class _SessionVideoStageState extends State<SessionVideoStage> {
 
     await _controller?.dispose();
     _controller = null;
+
+    // 1. Direct Network Streaming (Cloudflare R2 Presigned URLs)
+    if (widget.assetPath.startsWith('http://') || widget.assetPath.startsWith('https://')) {
+      try {
+        final controller = VideoPlayerController.networkUrl(Uri.parse(widget.assetPath));
+        _controller = controller;
+        controller.addListener(_onTick);
+
+        await controller.initialize();
+        await controller.setLooping(true);
+        await controller.setPlaybackSpeed(_speed);
+        await controller.setVolume(1);
+        await controller.play();
+
+        if (!mounted) return;
+        setState(() {
+          _ready = true;
+          _playing = true;
+          _loading = false;
+          _error = null;
+        });
+        return;
+      } catch (e) {
+        debugPrint('[SessionVideoStage] Network video error: $e');
+        if (!mounted) return;
+        setState(() {
+          _ready = false;
+          _playing = false;
+          _loading = false;
+          _error = 'Could not load cloud video stream.';
+        });
+        return;
+      }
+    }
 
     try {
       // File path avoids Android getLookupKeyForAsset pigeon channel failures.
@@ -226,6 +279,60 @@ class _SessionVideoStageState extends State<SessionVideoStage> {
                       child: CircularProgressIndicator(
                         color: AppTheme.cyanBlue,
                         strokeWidth: 2,
+                      ),
+                    )
+                  else if (_error == 'No video found for this delivery.' || widget.assetPath.trim().isEmpty)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 52,
+                              height: 52,
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.10),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.18),
+                                  width: 1.2,
+                                ),
+                              ),
+                              child: Image.asset(
+                                'assets/Bowler_icon.png',
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) => const Icon(
+                                  Icons.videocam_off_rounded,
+                                  color: Colors.white60,
+                                  size: 30,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'No Video Found',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                fontFamily: 'Roboto',
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Replay was not recorded for this delivery.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.65),
+                                fontSize: 11.5,
+                                fontFamily: 'Roboto',
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     )
                   else

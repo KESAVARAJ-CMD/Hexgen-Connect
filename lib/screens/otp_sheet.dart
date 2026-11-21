@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/theme/app_theme.dart';
-import 'complete_profile_screen.dart';
+import 'continue_with_screen.dart';
 
 class OtpBottomSheet extends StatefulWidget {
   final String phoneNumber;
@@ -86,18 +87,23 @@ class _OtpBottomSheetState extends State<OtpBottomSheet> {
     super.dispose();
   }
 
-  void _onVerify() {
+  void _onVerify() async {
     if (_isVerifying) return;
-    _isVerifying = true;
+    setState(() => _isVerifying = true);
 
+    final phone = widget.phoneNumber.trim();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('player_phone', phone);
+
+    if (!mounted) return;
     Navigator.pop(context); // Close OTP sheet
-    // Step 3 -> Step 4: Fixed navigation to CompleteProfileScreen
+
+    // Direct Flow: Mobile Number -> OTP -> Continue With Screen -> Dashboard
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CompleteProfileScreen(
-          initialPhone: widget.phoneNumber,
-          initialPlayerId: widget.playerId,
+        builder: (context) => ContinueWithScreen(
+          phone: phone,
         ),
       ),
     );

@@ -42,6 +42,8 @@ dependencies:
   url_launcher: ^6.3.1
   qr_flutter: ^4.1.0
   image_picker: ^1.2.4
+  share_plus: ^13.3.1
+  gal: ^3.0.1
 
 dev_dependencies:
   flutter_test:
@@ -69,13 +71,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/U15S125O3B1.mp4
-    - assets/logo.png
-    - assets/player.png
-    - assets/coach.png
-    - assets/cricket_ball.png
-    - assets/Bowler_icon.png
-    - assets/video_thumbnail.png
+    - assets/
     - assets/coaches/
 
   # An image asset can refer to one or more resolution-specific "variants", see

@@ -1,0 +1,997 @@
+﻿{
+    "openapi":  "3.1.0",
+    "info":  {
+                 "title":  "HexGen Contact Form API",
+                 "description":  "API for handling website contact form enquiries",
+                 "version":  "1.0.0"
+             },
+    "paths":  {
+                  "/api/contact":  {
+                                       "get":  {
+                                                   "tags":  [
+                                                                "Contact"
+                                                            ],
+                                                   "summary":  "Get Contacts",
+                                                   "operationId":  "get_contacts_api_contact_get",
+                                                   "responses":  {
+                                                                     "200":  "@{description=Successful Response; content=}"
+                                                                 },
+                                                   "security":  [
+                                                                    "@{HTTPBearer=System.Object[]}"
+                                                                ]
+                                               },
+                                       "post":  {
+                                                    "tags":  [
+                                                                 "Contact"
+                                                             ],
+                                                    "summary":  "Create Contact",
+                                                    "operationId":  "create_contact_api_contact_post",
+                                                    "requestBody":  {
+                                                                        "content":  "@{application/json=}",
+                                                                        "required":  true
+                                                                    },
+                                                    "responses":  {
+                                                                      "200":  "@{description=Successful Response; content=}",
+                                                                      "422":  "@{description=Validation Error; content=}"
+                                                                  }
+                                                }
+                                   },
+                  "/api/contact/{contact_id}":  {
+                                                    "get":  {
+                                                                "tags":  [
+                                                                             "Contact"
+                                                                         ],
+                                                                "summary":  "Get Contact",
+                                                                "operationId":  "get_contact_api_contact__contact_id__get",
+                                                                "security":  [
+                                                                                 "@{HTTPBearer=System.Object[]}"
+                                                                             ],
+                                                                "parameters":  [
+                                                                                   "@{name=contact_id; in=path; required=True; schema=}"
+                                                                               ],
+                                                                "responses":  {
+                                                                                  "200":  "@{description=Successful Response; content=}",
+                                                                                  "422":  "@{description=Validation Error; content=}"
+                                                                              }
+                                                            },
+                                                    "delete":  {
+                                                                   "tags":  [
+                                                                                "Contact"
+                                                                            ],
+                                                                   "summary":  "Delete Contact",
+                                                                   "operationId":  "delete_contact_api_contact__contact_id__delete",
+                                                                   "security":  [
+                                                                                    "@{HTTPBearer=System.Object[]}"
+                                                                                ],
+                                                                   "parameters":  [
+                                                                                      "@{name=contact_id; in=path; required=True; schema=}"
+                                                                                  ],
+                                                                   "responses":  {
+                                                                                     "200":  "@{description=Successful Response; content=}",
+                                                                                     "422":  "@{description=Validation Error; content=}"
+                                                                                 }
+                                                               }
+                                                },
+                  "/api/contact/{contact_id}/status":  {
+                                                           "patch":  {
+                                                                         "tags":  [
+                                                                                      "Contact"
+                                                                                  ],
+                                                                         "summary":  "Update Contact Status",
+                                                                         "operationId":  "update_contact_status_api_contact__contact_id__status_patch",
+                                                                         "security":  [
+                                                                                          "@{HTTPBearer=System.Object[]}"
+                                                                                      ],
+                                                                         "parameters":  [
+                                                                                            "@{name=contact_id; in=path; required=True; schema=}"
+                                                                                        ],
+                                                                         "requestBody":  {
+                                                                                             "required":  true,
+                                                                                             "content":  "@{application/json=}"
+                                                                                         },
+                                                                         "responses":  {
+                                                                                           "200":  "@{description=Successful Response; content=}",
+                                                                                           "422":  "@{description=Validation Error; content=}"
+                                                                                       }
+                                                                     }
+                                                       },
+                  "/api/contact/{contact_id}/read":  {
+                                                         "patch":  {
+                                                                       "tags":  [
+                                                                                    "Contact"
+                                                                                ],
+                                                                       "summary":  "Mark Contact Read",
+                                                                       "operationId":  "mark_contact_read_api_contact__contact_id__read_patch",
+                                                                       "security":  [
+                                                                                        "@{HTTPBearer=System.Object[]}"
+                                                                                    ],
+                                                                       "parameters":  [
+                                                                                          "@{name=contact_id; in=path; required=True; schema=}"
+                                                                                      ],
+                                                                       "responses":  {
+                                                                                         "200":  "@{description=Successful Response; content=}",
+                                                                                         "422":  "@{description=Validation Error; content=}"
+                                                                                     }
+                                                                   }
+                                                     },
+                  "/api/contact/read-all":  {
+                                                "post":  {
+                                                             "tags":  [
+                                                                          "Contact"
+                                                                      ],
+                                                             "summary":  "Mark All Contacts Read",
+                                                             "operationId":  "mark_all_contacts_read_api_contact_read_all_post",
+                                                             "responses":  {
+                                                                               "200":  "@{description=Successful Response; content=}"
+                                                                           },
+                                                             "security":  [
+                                                                              "@{HTTPBearer=System.Object[]}"
+                                                                          ]
+                                                         }
+                                            },
+                  "/api/contact/{contact_id}/reply":  {
+                                                          "post":  {
+                                                                       "tags":  [
+                                                                                    "Contact"
+                                                                                ],
+                                                                       "summary":  "Reply To Contact",
+                                                                       "operationId":  "reply_to_contact_api_contact__contact_id__reply_post",
+                                                                       "security":  [
+                                                                                        "@{HTTPBearer=System.Object[]}"
+                                                                                    ],
+                                                                       "parameters":  [
+                                                                                          "@{name=contact_id; in=path; required=True; schema=}"
+                                                                                      ],
+                                                                       "requestBody":  {
+                                                                                           "required":  true,
+                                                                                           "content":  "@{application/json=}"
+                                                                                       },
+                                                                       "responses":  {
+                                                                                         "200":  "@{description=Successful Response; content=}",
+                                                                                         "422":  "@{description=Validation Error; content=}"
+                                                                                     }
+                                                                   }
+                                                      },
+                  "/api/auth/signup":  {
+                                           "post":  {
+                                                        "tags":  [
+                                                                     "Authentication"
+                                                                 ],
+                                                        "summary":  "Signup",
+                                                        "operationId":  "signup_api_auth_signup_post",
+                                                        "requestBody":  {
+                                                                            "content":  "@{application/json=}",
+                                                                            "required":  true
+                                                                        },
+                                                        "responses":  {
+                                                                          "201":  "@{description=Successful Response; content=}",
+                                                                          "422":  "@{description=Validation Error; content=}"
+                                                                      }
+                                                    }
+                                       },
+                  "/api/auth/signup-status":  {
+                                                  "get":  {
+                                                              "tags":  [
+                                                                           "Authentication"
+                                                                       ],
+                                                              "summary":  "Get Signup Status",
+                                                              "operationId":  "get_signup_status_api_auth_signup_status_get",
+                                                              "responses":  {
+                                                                                "200":  "@{description=Successful Response; content=}"
+                                                                            }
+                                                          }
+                                              },
+                  "/api/auth/login":  {
+                                          "post":  {
+                                                       "tags":  [
+                                                                    "Authentication"
+                                                                ],
+                                                       "summary":  "Login",
+                                                       "operationId":  "login_api_auth_login_post",
+                                                       "requestBody":  {
+                                                                           "content":  "@{application/json=}",
+                                                                           "required":  true
+                                                                       },
+                                                       "responses":  {
+                                                                         "200":  "@{description=Successful Response; content=}",
+                                                                         "422":  "@{description=Validation Error; content=}"
+                                                                     }
+                                                   }
+                                      },
+                  "/api/auth/session":  {
+                                            "get":  {
+                                                        "tags":  [
+                                                                     "Authentication"
+                                                                 ],
+                                                        "summary":  "Get My Account",
+                                                        "operationId":  "get_my_account_api_auth_session_get",
+                                                        "responses":  {
+                                                                          "200":  "@{description=Successful Response; content=}"
+                                                                      },
+                                                        "security":  [
+                                                                         "@{HTTPBearer=System.Object[]}"
+                                                                     ]
+                                                    }
+                                        },
+                  "/api/auth/me":  {
+                                       "get":  {
+                                                   "tags":  [
+                                                                "Authentication"
+                                                            ],
+                                                   "summary":  "Get My Account",
+                                                   "operationId":  "get_my_account_api_auth_me_get",
+                                                   "responses":  {
+                                                                     "200":  "@{description=Successful Response; content=}"
+                                                                 },
+                                                   "security":  [
+                                                                    "@{HTTPBearer=System.Object[]}"
+                                                                ]
+                                               }
+                                   },
+                  "/api/auth/lock-status":  {
+                                                "post":  {
+                                                             "tags":  [
+                                                                          "Authentication"
+                                                                      ],
+                                                             "summary":  "Get Admin Lock Status",
+                                                             "operationId":  "get_admin_lock_status_api_auth_lock_status_post",
+                                                             "requestBody":  {
+                                                                                 "content":  "@{application/json=}",
+                                                                                 "required":  true
+                                                                             },
+                                                             "responses":  {
+                                                                               "200":  "@{description=Successful Response; content=}",
+                                                                               "422":  "@{description=Validation Error; content=}"
+                                                                           }
+                                                         }
+                                            },
+                  "/api/auth/users":  {
+                                          "get":  {
+                                                      "tags":  [
+                                                                   "Authentication"
+                                                               ],
+                                                      "summary":  "List Users",
+                                                      "operationId":  "list_users_api_auth_users_get",
+                                                      "responses":  {
+                                                                        "200":  "@{description=Successful Response; content=}"
+                                                                    },
+                                                      "security":  [
+                                                                       "@{HTTPBearer=System.Object[]}"
+                                                                   ]
+                                                  },
+                                          "post":  {
+                                                       "tags":  [
+                                                                    "Authentication"
+                                                                ],
+                                                       "summary":  "Create User",
+                                                       "operationId":  "create_user_api_auth_users_post",
+                                                       "requestBody":  {
+                                                                           "content":  "@{application/json=}",
+                                                                           "required":  true
+                                                                       },
+                                                       "responses":  {
+                                                                         "201":  "@{description=Successful Response; content=}",
+                                                                         "422":  "@{description=Validation Error; content=}"
+                                                                     },
+                                                       "security":  [
+                                                                        "@{HTTPBearer=System.Object[]}"
+                                                                    ]
+                                                   }
+                                      },
+                  "/api/auth/users/{user_id}":  {
+                                                    "patch":  {
+                                                                  "tags":  [
+                                                                               "Authentication"
+                                                                           ],
+                                                                  "summary":  "Update User",
+                                                                  "operationId":  "update_user_api_auth_users__user_id__patch",
+                                                                  "security":  [
+                                                                                   "@{HTTPBearer=System.Object[]}"
+                                                                               ],
+                                                                  "parameters":  [
+                                                                                     "@{name=user_id; in=path; required=True; schema=}"
+                                                                                 ],
+                                                                  "requestBody":  {
+                                                                                      "required":  true,
+                                                                                      "content":  "@{application/json=}"
+                                                                                  },
+                                                                  "responses":  {
+                                                                                    "200":  "@{description=Successful Response; content=}",
+                                                                                    "422":  "@{description=Validation Error; content=}"
+                                                                                }
+                                                              },
+                                                    "delete":  {
+                                                                   "tags":  [
+                                                                                "Authentication"
+                                                                            ],
+                                                                   "summary":  "Delete User",
+                                                                   "operationId":  "delete_user_api_auth_users__user_id__delete",
+                                                                   "security":  [
+                                                                                    "@{HTTPBearer=System.Object[]}"
+                                                                                ],
+                                                                   "parameters":  [
+                                                                                      "@{name=user_id; in=path; required=True; schema=}"
+                                                                                  ],
+                                                                   "responses":  {
+                                                                                     "200":  "@{description=Successful Response; content=}",
+                                                                                     "422":  "@{description=Validation Error; content=}"
+                                                                                 }
+                                                               }
+                                                },
+                  "/api/auth/users/{user_id}/disable":  {
+                                                            "post":  {
+                                                                         "tags":  [
+                                                                                      "Authentication"
+                                                                                  ],
+                                                                         "summary":  "Disable User",
+                                                                         "operationId":  "disable_user_api_auth_users__user_id__disable_post",
+                                                                         "security":  [
+                                                                                          "@{HTTPBearer=System.Object[]}"
+                                                                                      ],
+                                                                         "parameters":  [
+                                                                                            "@{name=user_id; in=path; required=True; schema=}"
+                                                                                        ],
+                                                                         "responses":  {
+                                                                                           "200":  "@{description=Successful Response; content=}",
+                                                                                           "422":  "@{description=Validation Error; content=}"
+                                                                                       }
+                                                                     }
+                                                        },
+                  "/api/auth/users/{user_id}/enable":  {
+                                                           "post":  {
+                                                                        "tags":  [
+                                                                                     "Authentication"
+                                                                                 ],
+                                                                        "summary":  "Enable User",
+                                                                        "operationId":  "enable_user_api_auth_users__user_id__enable_post",
+                                                                        "security":  [
+                                                                                         "@{HTTPBearer=System.Object[]}"
+                                                                                     ],
+                                                                        "parameters":  [
+                                                                                           "@{name=user_id; in=path; required=True; schema=}"
+                                                                                       ],
+                                                                        "responses":  {
+                                                                                          "200":  "@{description=Successful Response; content=}",
+                                                                                          "422":  "@{description=Validation Error; content=}"
+                                                                                      }
+                                                                    }
+                                                       },
+                  "/api/auth/users/{user_id}/lock":  {
+                                                         "post":  {
+                                                                      "tags":  [
+                                                                                   "Authentication"
+                                                                               ],
+                                                                      "summary":  "Lock User",
+                                                                      "operationId":  "lock_user_api_auth_users__user_id__lock_post",
+                                                                      "security":  [
+                                                                                       "@{HTTPBearer=System.Object[]}"
+                                                                                   ],
+                                                                      "parameters":  [
+                                                                                         "@{name=user_id; in=path; required=True; schema=}"
+                                                                                     ],
+                                                                      "responses":  {
+                                                                                        "200":  "@{description=Successful Response; content=}",
+                                                                                        "422":  "@{description=Validation Error; content=}"
+                                                                                    }
+                                                                  }
+                                                     },
+                  "/api/auth/users/{user_id}/unlock":  {
+                                                           "post":  {
+                                                                        "tags":  [
+                                                                                     "Authentication"
+                                                                                 ],
+                                                                        "summary":  "Unlock User",
+                                                                        "operationId":  "unlock_user_api_auth_users__user_id__unlock_post",
+                                                                        "security":  [
+                                                                                         "@{HTTPBearer=System.Object[]}"
+                                                                                     ],
+                                                                        "parameters":  [
+                                                                                           "@{name=user_id; in=path; required=True; schema=}"
+                                                                                       ],
+                                                                        "responses":  {
+                                                                                          "200":  "@{description=Successful Response; content=}",
+                                                                                          "422":  "@{description=Validation Error; content=}"
+                                                                                      }
+                                                                    }
+                                                       },
+                  "/api/email-activity/{email_job_id}/retry":  {
+                                                                   "post":  {
+                                                                                "tags":  [
+                                                                                             "Email Activity"
+                                                                                         ],
+                                                                                "summary":  "Retry Email Job",
+                                                                                "operationId":  "retry_email_job_api_email_activity__email_job_id__retry_post",
+                                                                                "security":  [
+                                                                                                 "@{HTTPBearer=System.Object[]}"
+                                                                                             ],
+                                                                                "parameters":  [
+                                                                                                   "@{name=email_job_id; in=path; required=True; schema=}"
+                                                                                               ],
+                                                                                "responses":  {
+                                                                                                  "200":  "@{description=Successful Response; content=}",
+                                                                                                  "422":  "@{description=Validation Error; content=}"
+                                                                                              }
+                                                                            }
+                                                               },
+                  "/api/email-activity/summary":  {
+                                                      "get":  {
+                                                                  "tags":  [
+                                                                               "Email Activity"
+                                                                           ],
+                                                                  "summary":  "Get Email Activity Summary",
+                                                                  "operationId":  "get_email_activity_summary_api_email_activity_summary_get",
+                                                                  "responses":  {
+                                                                                    "200":  "@{description=Successful Response; content=}"
+                                                                                },
+                                                                  "security":  [
+                                                                                   "@{HTTPBearer=System.Object[]}"
+                                                                               ]
+                                                              }
+                                                  },
+                  "/api/email-activity":  {
+                                              "get":  {
+                                                          "tags":  [
+                                                                       "Email Activity"
+                                                                   ],
+                                                          "summary":  "Get Email Activity",
+                                                          "operationId":  "get_email_activity_api_email_activity_get",
+                                                          "security":  [
+                                                                           "@{HTTPBearer=System.Object[]}"
+                                                                       ],
+                                                          "parameters":  [
+                                                                             "@{name=status; in=query; required=False; schema=}",
+                                                                             "@{name=limit; in=query; required=False; schema=}",
+                                                                             "@{name=offset; in=query; required=False; schema=}"
+                                                                         ],
+                                                          "responses":  {
+                                                                            "200":  "@{description=Successful Response; content=}",
+                                                                            "422":  "@{description=Validation Error; content=}"
+                                                                        }
+                                                      }
+                                          },
+                  "/api/job-applications/summary":  {
+                                                        "get":  {
+                                                                    "tags":  [
+                                                                                 "Job Applications"
+                                                                             ],
+                                                                    "summary":  "Get Job Application Summary",
+                                                                    "operationId":  "get_job_application_summary_api_job_applications_summary_get",
+                                                                    "responses":  {
+                                                                                      "200":  "@{description=Successful Response; content=}"
+                                                                                  },
+                                                                    "security":  [
+                                                                                     "@{HTTPBearer=System.Object[]}"
+                                                                                 ]
+                                                                }
+                                                    },
+                  "/api/job-applications":  {
+                                                "get":  {
+                                                            "tags":  [
+                                                                         "Job Applications"
+                                                                     ],
+                                                            "summary":  "Get Job Applications",
+                                                            "operationId":  "get_job_applications_api_job_applications_get",
+                                                            "responses":  {
+                                                                              "200":  "@{description=Successful Response; content=}"
+                                                                          },
+                                                            "security":  [
+                                                                             "@{HTTPBearer=System.Object[]}"
+                                                                         ]
+                                                        },
+                                                "post":  {
+                                                             "tags":  [
+                                                                          "Job Applications"
+                                                                      ],
+                                                             "summary":  "Create Job Application",
+                                                             "operationId":  "create_job_application_api_job_applications_post",
+                                                             "requestBody":  {
+                                                                                 "content":  "@{application/json=}",
+                                                                                 "required":  true
+                                                                             },
+                                                             "responses":  {
+                                                                               "201":  "@{description=Successful Response; content=}",
+                                                                               "422":  "@{description=Validation Error; content=}"
+                                                                           }
+                                                         }
+                                            },
+                  "/api/push/data":  {
+                                         "post":  {
+                                                      "tags":  [
+                                                                   "Matrix Sync"
+                                                               ],
+                                                      "summary":  "Push Matrix Data",
+                                                      "operationId":  "push_matrix_data_api_push_data_post",
+                                                      "parameters":  [
+                                                                         "@{name=X-Machine-ID; in=header; required=False; schema=}",
+                                                                         "@{name=X-API-Key; in=header; required=False; schema=}"
+                                                                     ],
+                                                      "requestBody":  {
+                                                                          "required":  true,
+                                                                          "content":  "@{application/json=}"
+                                                                      },
+                                                      "responses":  {
+                                                                        "200":  "@{description=Successful Response; content=}",
+                                                                        "422":  "@{description=Validation Error; content=}"
+                                                                    }
+                                                  }
+                                     },
+                  "/api/matrix/videos/upload-request":  {
+                                                            "post":  {
+                                                                         "tags":  [
+                                                                                      "Matrix Sync"
+                                                                                  ],
+                                                                         "summary":  "Request Matrix Video Upload",
+                                                                         "operationId":  "request_matrix_video_upload_api_matrix_videos_upload_request_post",
+                                                                         "parameters":  [
+                                                                                            "@{name=X-Machine-ID; in=header; required=False; schema=}",
+                                                                                            "@{name=X-API-Key; in=header; required=False; schema=}"
+                                                                                        ],
+                                                                         "requestBody":  {
+                                                                                             "required":  true,
+                                                                                             "content":  "@{application/json=}"
+                                                                                         },
+                                                                         "responses":  {
+                                                                                           "200":  "@{description=Successful Response; content=}",
+                                                                                           "422":  "@{description=Validation Error; content=}"
+                                                                                       }
+                                                                     }
+                                                        },
+                  "/api/matrix/sessions/{session_id}/videos/complete":  {
+                                                                            "post":  {
+                                                                                         "tags":  [
+                                                                                                      "Matrix Sync"
+                                                                                                  ],
+                                                                                         "summary":  "Complete Matrix Video Upload",
+                                                                                         "operationId":  "complete_matrix_video_upload_api_matrix_sessions__session_id__videos_complete_post",
+                                                                                         "parameters":  [
+                                                                                                            "@{name=session_id; in=path; required=True; schema=}",
+                                                                                                            "@{name=X-Machine-ID; in=header; required=False; schema=}",
+                                                                                                            "@{name=X-API-Key; in=header; required=False; schema=}"
+                                                                                                        ],
+                                                                                         "requestBody":  {
+                                                                                                             "required":  true,
+                                                                                                             "content":  "@{application/json=}"
+                                                                                                         },
+                                                                                         "responses":  {
+                                                                                                           "200":  "@{description=Successful Response; content=}",
+                                                                                                           "422":  "@{description=Validation Error; content=}"
+                                                                                                       }
+                                                                                     }
+                                                                        },
+                  "/api/matrix/sessions/{session_id}/videos/upload-status":  {
+                                                                                 "get":  {
+                                                                                             "tags":  [
+                                                                                                          "Matrix Sync"
+                                                                                                      ],
+                                                                                             "summary":  "Get Matrix Video Upload Status",
+                                                                                             "operationId":  "get_matrix_video_upload_status_api_matrix_sessions__session_id__videos_upload_status_get",
+                                                                                             "parameters":  [
+                                                                                                                "@{name=session_id; in=path; required=True; schema=}",
+                                                                                                                "@{name=video_path; in=query; required=True; schema=}",
+                                                                                                                "@{name=X-Machine-ID; in=header; required=False; schema=}",
+                                                                                                                "@{name=X-API-Key; in=header; required=False; schema=}"
+                                                                                                            ],
+                                                                                             "responses":  {
+                                                                                                               "200":  "@{description=Successful Response; content=}",
+                                                                                                               "422":  "@{description=Validation Error; content=}"
+                                                                                                           }
+                                                                                         }
+                                                                             },
+                  "/api/matrix/machines/heartbeat":  {
+                                                         "post":  {
+                                                                      "tags":  [
+                                                                                   "Matrix Sync"
+                                                                               ],
+                                                                      "summary":  "Record Matrix Machine Heartbeat",
+                                                                      "operationId":  "record_matrix_machine_heartbeat_api_matrix_machines_heartbeat_post",
+                                                                      "parameters":  [
+                                                                                         "@{name=X-Machine-ID; in=header; required=False; schema=}",
+                                                                                         "@{name=X-API-Key; in=header; required=False; schema=}"
+                                                                                     ],
+                                                                      "requestBody":  {
+                                                                                          "required":  true,
+                                                                                          "content":  "@{application/json=}"
+                                                                                      },
+                                                                      "responses":  {
+                                                                                        "200":  "@{description=Successful Response; content=}",
+                                                                                        "422":  "@{description=Validation Error; content=}"
+                                                                                    }
+                                                                  }
+                                                     },
+                  "/api/matrix/machines":  {
+                                               "get":  {
+                                                           "tags":  [
+                                                                        "Matrix Sync"
+                                                                    ],
+                                                           "summary":  "List Matrix Machines",
+                                                           "operationId":  "list_matrix_machines_api_matrix_machines_get",
+                                                           "parameters":  [
+                                                                              "@{name=X-API-Key; in=header; required=False; schema=}"
+                                                                          ],
+                                                           "responses":  {
+                                                                             "200":  "@{description=Successful Response; content=}",
+                                                                             "422":  "@{description=Validation Error; content=}"
+                                                                         }
+                                                       }
+                                           },
+                  "/api/matrix/videos/search":  {
+                                                    "get":  {
+                                                                "tags":  [
+                                                                             "Matrix Sync"
+                                                                         ],
+                                                                "summary":  "Search Matrix Videos Get",
+                                                                "operationId":  "search_matrix_videos_get_api_matrix_videos_search_get",
+                                                                "parameters":  [
+                                                                                   "@{name=mobile_number; in=query; required=False; schema=; description=Player mobile number}",
+                                                                                   "@{name=player_id; in=query; required=False; schema=; description=Selected Player ID}",
+                                                                                   "@{name=session_id; in=query; required=False; schema=; description=Session ID}",
+                                                                                   "@{name=from_date; in=query; required=False; schema=; description=From timestamp}",
+                                                                                   "@{name=to_date; in=query; required=False; schema=; description=To timestamp}",
+                                                                                   "@{name=limit; in=query; required=False; schema=}",
+                                                                                   "@{name=offset; in=query; required=False; schema=}"
+                                                                               ],
+                                                                "responses":  {
+                                                                                  "200":  "@{description=Successful Response; content=}",
+                                                                                  "422":  "@{description=Validation Error; content=}"
+                                                                              }
+                                                            },
+                                                    "post":  {
+                                                                 "tags":  [
+                                                                              "Matrix Sync"
+                                                                          ],
+                                                                 "summary":  "Search Matrix Videos Post",
+                                                                 "operationId":  "search_matrix_videos_post_api_matrix_videos_search_post",
+                                                                 "requestBody":  {
+                                                                                     "required":  true,
+                                                                                     "content":  "@{application/json=}"
+                                                                                 },
+                                                                 "responses":  {
+                                                                                   "200":  "@{description=Successful Response; content=}",
+                                                                                   "422":  "@{description=Validation Error; content=}"
+                                                                               }
+                                                             }
+                                                },
+                  "/api/matrix/videos/play":  {
+                                                  "get":  {
+                                                              "tags":  [
+                                                                           "Matrix Sync"
+                                                                       ],
+                                                              "summary":  "Get Matrix Video Playback Url",
+                                                              "operationId":  "get_matrix_video_playback_url_api_matrix_videos_play_get",
+                                                              "parameters":  [
+                                                                                 "@{name=video_path; in=query; required=True; schema=}"
+                                                                             ],
+                                                              "responses":  {
+                                                                                "200":  "@{description=Successful Response; content=}",
+                                                                                "422":  "@{description=Validation Error; content=}"
+                                                                            }
+                                                          }
+                                              },
+                  "/api/matrix/players":  {
+                                              "get":  {
+                                                          "tags":  [
+                                                                       "Matrix Sync"
+                                                                   ],
+                                                          "summary":  "Get Players By Mobile",
+                                                          "operationId":  "get_players_by_mobile_api_matrix_players_get",
+                                                          "parameters":  [
+                                                                             "@{name=mobile_number; in=query; required=True; schema=; description=Player mobile number}"
+                                                                         ],
+                                                          "responses":  {
+                                                                            "200":  "@{description=Successful Response; content=}",
+                                                                            "422":  "@{description=Validation Error; content=}"
+                                                                        }
+                                                      }
+                                          },
+                  "/api/matrix/players/{player_id}/sessions":  {
+                                                                   "get":  {
+                                                                               "tags":  [
+                                                                                            "Matrix Sync"
+                                                                                        ],
+                                                                               "summary":  "Get Player Sessions And Overs",
+                                                                               "operationId":  "get_player_sessions_and_overs_api_matrix_players__player_id__sessions_get",
+                                                                               "parameters":  [
+                                                                                                  "@{name=player_id; in=path; required=True; schema=}"
+                                                                                              ],
+                                                                               "responses":  {
+                                                                                                 "200":  "@{description=Successful Response; content=}",
+                                                                                                 "422":  "@{description=Validation Error; content=}"
+                                                                                             }
+                                                                           }
+                                                               },
+                  "/":  {
+                            "get":  {
+                                        "summary":  "Home",
+                                        "operationId":  "home__get",
+                                        "responses":  {
+                                                          "200":  "@{description=Successful Response; content=}"
+                                                      }
+                                    }
+                        },
+                  "/health":  {
+                                  "get":  {
+                                              "summary":  "Health Check",
+                                              "operationId":  "health_check_health_get",
+                                              "responses":  {
+                                                                "200":  "@{description=Successful Response; content=}"
+                                                            }
+                                          }
+                              }
+              },
+    "components":  {
+                       "schemas":  {
+                                       "AdminCredentials":  {
+                                                                "properties":  {
+                                                                                   "phone":  "@{type=string; maxLength=20; minLength=7; title=Phone}",
+                                                                                   "pin":  "@{type=string; maxLength=4; minLength=4; pattern=^\\d{4}$; title=Pin}"
+                                                                               },
+                                                                "type":  "object",
+                                                                "required":  [
+                                                                                 "phone",
+                                                                                 "pin"
+                                                                             ],
+                                                                "title":  "AdminCredentials"
+                                                            },
+                                       "AdminPhoneLookup":  {
+                                                                "properties":  {
+                                                                                   "phone":  "@{type=string; maxLength=20; minLength=7; title=Phone}"
+                                                                               },
+                                                                "type":  "object",
+                                                                "required":  [
+                                                                                 "phone"
+                                                                             ],
+                                                                "title":  "AdminPhoneLookup"
+                                                            },
+                                       "AdminSignup":  {
+                                                           "properties":  {
+                                                                              "name":  "@{type=string; maxLength=150; minLength=2; title=Name}",
+                                                                              "phone":  "@{type=string; maxLength=20; minLength=7; title=Phone}",
+                                                                              "pin":  "@{type=string; maxLength=4; minLength=4; pattern=^\\d{4}$; title=Pin}"
+                                                                          },
+                                                           "type":  "object",
+                                                           "required":  [
+                                                                            "name",
+                                                                            "phone",
+                                                                            "pin"
+                                                                        ],
+                                                           "title":  "AdminSignup"
+                                                       },
+                                       "AdminUserCreate":  {
+                                                               "properties":  {
+                                                                                  "name":  "@{type=string; maxLength=150; minLength=2; title=Name}",
+                                                                                  "phone":  "@{type=string; maxLength=20; minLength=7; title=Phone}",
+                                                                                  "pin":  "@{type=string; maxLength=4; minLength=4; pattern=^\\d{4}$; title=Pin}",
+                                                                                  "role":  "@{type=string; enum=System.Object[]; title=Role; default=staff}"
+                                                                              },
+                                                               "type":  "object",
+                                                               "required":  [
+                                                                                "name",
+                                                                                "phone",
+                                                                                "pin"
+                                                                            ],
+                                                               "title":  "AdminUserCreate"
+                                                           },
+                                       "AdminUserUpdate":  {
+                                                               "properties":  {
+                                                                                  "name":  "@{anyOf=System.Object[]; title=Name}",
+                                                                                  "phone":  "@{anyOf=System.Object[]; title=Phone}",
+                                                                                  "pin":  "@{anyOf=System.Object[]; title=Pin}",
+                                                                                  "role":  "@{anyOf=System.Object[]; title=Role}",
+                                                                                  "is_active":  "@{anyOf=System.Object[]; title=Is Active}"
+                                                                              },
+                                                               "type":  "object",
+                                                               "title":  "AdminUserUpdate"
+                                                           },
+                                       "ContactCreate":  {
+                                                             "properties":  {
+                                                                                "name":  "@{type=string; maxLength=150; minLength=2; title=Name}",
+                                                                                "email":  "@{anyOf=System.Object[]; title=Email}",
+                                                                                "phone":  "@{anyOf=System.Object[]; title=Phone}",
+                                                                                "subject":  "@{anyOf=System.Object[]; title=Subject}",
+                                                                                "message":  "@{type=string; maxLength=5000; minLength=10; title=Message}"
+                                                                            },
+                                                             "type":  "object",
+                                                             "required":  [
+                                                                              "name",
+                                                                              "message"
+                                                                          ],
+                                                             "title":  "ContactCreate"
+                                                         },
+                                       "ContactReply":  {
+                                                            "properties":  {
+                                                                               "message":  "@{type=string; maxLength=10000; minLength=1; title=Message}"
+                                                                           },
+                                                            "type":  "object",
+                                                            "required":  [
+                                                                             "message"
+                                                                         ],
+                                                            "title":  "ContactReply"
+                                                        },
+                                       "ContactStatusUpdate":  {
+                                                                   "properties":  {
+                                                                                      "status":  "@{type=string; enum=System.Object[]; title=Status}"
+                                                                                  },
+                                                                   "type":  "object",
+                                                                   "required":  [
+                                                                                    "status"
+                                                                                ],
+                                                                   "title":  "ContactStatusUpdate"
+                                                               },
+                                       "HTTPValidationError":  {
+                                                                   "properties":  {
+                                                                                      "detail":  "@{items=; type=array; title=Detail}"
+                                                                                  },
+                                                                   "type":  "object",
+                                                                   "title":  "HTTPValidationError"
+                                                               },
+                                       "JobApplicationCreate":  {
+                                                                    "properties":  {
+                                                                                       "name":  "@{type=string; maxLength=150; minLength=2; title=Name}",
+                                                                                       "position":  "@{type=string; maxLength=255; minLength=2; title=Position}",
+                                                                                       "email":  "@{type=string; format=email; title=Email}",
+                                                                                       "phone":  "@{anyOf=System.Object[]; title=Phone}",
+                                                                                       "resume_url":  "@{anyOf=System.Object[]; title=Resume Url}"
+                                                                                   },
+                                                                    "type":  "object",
+                                                                    "required":  [
+                                                                                     "name",
+                                                                                     "position",
+                                                                                     "email"
+                                                                                 ],
+                                                                    "title":  "JobApplicationCreate"
+                                                                },
+                                       "MatrixDataPushPayload":  {
+                                                                     "properties":  {
+                                                                                        "players":  "@{items=; type=array; title=Players}",
+                                                                                        "sessions":  "@{items=; type=array; title=Sessions}",
+                                                                                        "session_details":  "@{items=; type=array; title=Session Details}"
+                                                                                    },
+                                                                     "type":  "object",
+                                                                     "title":  "MatrixDataPushPayload"
+                                                                 },
+                                       "MatrixMachineHeartbeatPayload":  {
+                                                                             "properties":  {
+                                                                                                "machine_id":  "@{type=string; maxLength=100; minLength=1; title=Machine Id}",
+                                                                                                "machine_name":  "@{anyOf=System.Object[]; title=Machine Name}",
+                                                                                                "app_version":  "@{anyOf=System.Object[]; title=App Version}",
+                                                                                                "installation_path":  "@{anyOf=System.Object[]; title=Installation Path}",
+                                                                                                "local_db_path":  "@{anyOf=System.Object[]; title=Local Db Path}",
+                                                                                                "replay_folder_path":  "@{anyOf=System.Object[]; title=Replay Folder Path}",
+                                                                                                "ip_address":  "@{anyOf=System.Object[]; title=Ip Address}",
+                                                                                                "status":  "@{anyOf=System.Object[]; title=Status; default=online}"
+                                                                                            },
+                                                                             "type":  "object",
+                                                                             "required":  [
+                                                                                              "machine_id"
+                                                                                          ],
+                                                                             "title":  "MatrixMachineHeartbeatPayload"
+                                                                         },
+                                       "MatrixPlayerPayload":  {
+                                                                   "properties":  {
+                                                                                      "id":  "@{type=integer; minimum=1.0; title=Id}",
+                                                                                      "mobile_number":  "@{anyOf=System.Object[]; title=Mobile Number}",
+                                                                                      "player_name":  "@{type=string; maxLength=255; minLength=1; title=Player Name}",
+                                                                                      "batting_hand":  "@{anyOf=System.Object[]; title=Batting Hand}",
+                                                                                      "skill_level":  "@{anyOf=System.Object[]; title=Skill Level}",
+                                                                                      "status":  "@{anyOf=System.Object[]; title=Status}",
+                                                                                      "is_active":  "@{anyOf=System.Object[]; title=Is Active}"
+                                                                                  },
+                                                                   "type":  "object",
+                                                                   "required":  [
+                                                                                    "id",
+                                                                                    "player_name"
+                                                                                ],
+                                                                   "title":  "MatrixPlayerPayload"
+                                                               },
+                                       "MatrixSessionDetailPayload":  {
+                                                                          "properties":  {
+                                                                                             "id":  "@{type=integer; minimum=1.0; title=Id}",
+                                                                                             "session_id":  "@{type=integer; minimum=1.0; title=Session Id}",
+                                                                                             "over_number":  "@{type=integer; minimum=1.0; title=Over Number}",
+                                                                                             "arm_type":  "@{anyOf=System.Object[]; title=Arm Type}",
+                                                                                             "bowler_type":  "@{anyOf=System.Object[]; title=Bowler Type}",
+                                                                                             "speed":  "@{anyOf=System.Object[]; title=Speed}",
+                                                                                             "variation":  "@{anyOf=System.Object[]; title=Variation}",
+                                                                                             "direction":  "@{anyOf=System.Object[]; title=Direction}",
+                                                                                             "spin_level":  "@{anyOf=System.Object[]; title=Spin Level}",
+                                                                                             "random_spin_swing":  "@{anyOf=System.Object[]; title=Random Spin Swing}",
+                                                                                             "random_line_length":  "@{anyOf=System.Object[]; title=Random Line Length}",
+                                                                                             "random_speed":  "@{anyOf=System.Object[]; title=Random Speed}",
+                                                                                             "is_active":  "@{anyOf=System.Object[]; title=Is Active}",
+                                                                                             "line_no":  "@{anyOf=System.Object[]; title=Line No}",
+                                                                                             "length":  "@{anyOf=System.Object[]; title=Length}",
+                                                                                             "drift":  "@{anyOf=System.Object[]; title=Drift}"
+                                                                                         },
+                                                                          "type":  "object",
+                                                                          "required":  [
+                                                                                           "id",
+                                                                                           "session_id",
+                                                                                           "over_number"
+                                                                                       ],
+                                                                          "title":  "MatrixSessionDetailPayload"
+                                                                      },
+                                       "MatrixSessionPayload":  {
+                                                                    "properties":  {
+                                                                                       "id":  "@{type=integer; minimum=1.0; title=Id}",
+                                                                                       "player_id":  "@{type=integer; minimum=1.0; title=Player Id}",
+                                                                                       "session_name":  "@{anyOf=System.Object[]; title=Session Name}",
+                                                                                       "session_date":  "@{anyOf=System.Object[]; title=Session Date}",
+                                                                                       "num_overs":  "@{anyOf=System.Object[]; title=Num Overs}",
+                                                                                       "session_status":  "@{anyOf=System.Object[]; title=Session Status}",
+                                                                                       "match_format":  "@{anyOf=System.Object[]; title=Match Format}",
+                                                                                       "match_started_at":  "@{anyOf=System.Object[]; title=Match Started At}",
+                                                                                       "interval_between_overs":  "@{anyOf=System.Object[]; title=Interval Between Overs}",
+                                                                                       "interval_between_balls":  "@{anyOf=System.Object[]; title=Interval Between Balls}",
+                                                                                       "current_over":  "@{anyOf=System.Object[]; title=Current Over}",
+                                                                                       "current_ball":  "@{anyOf=System.Object[]; title=Current Ball}"
+                                                                                   },
+                                                                    "type":  "object",
+                                                                    "required":  [
+                                                                                     "id",
+                                                                                     "player_id"
+                                                                                 ],
+                                                                    "title":  "MatrixSessionPayload"
+                                                                },
+                                       "MatrixVideoCompletePayload":  {
+                                                                          "properties":  {
+                                                                                             "video_path":  "@{type=string; maxLength=512; minLength=1; title=Video Path}"
+                                                                                         },
+                                                                          "type":  "object",
+                                                                          "required":  [
+                                                                                           "video_path"
+                                                                                       ],
+                                                                          "title":  "MatrixVideoCompletePayload"
+                                                                      },
+                                       "MatrixVideoSearchPayload":  {
+                                                                        "properties":  {
+                                                                                           "mobile_number":  "@{anyOf=System.Object[]; title=Mobile Number}",
+                                                                                           "session_id":  "@{anyOf=System.Object[]; title=Session Id}",
+                                                                                           "from_date":  "@{anyOf=System.Object[]; title=From Date}",
+                                                                                           "to_date":  "@{anyOf=System.Object[]; title=To Date}",
+                                                                                           "limit":  "@{type=integer; maximum=200.0; minimum=1.0; title=Limit; default=50}",
+                                                                                           "offset":  "@{type=integer; minimum=0.0; title=Offset; default=0}"
+                                                                                       },
+                                                                        "type":  "object",
+                                                                        "title":  "MatrixVideoSearchPayload"
+                                                                    },
+                                       "MatrixVideoUploadRequest":  {
+                                                                        "properties":  {
+                                                                                           "session_id":  "@{type=integer; minimum=1.0; title=Session Id}",
+                                                                                           "filename":  "@{type=string; maxLength=255; minLength=1; title=Filename}",
+                                                                                           "file_size_bytes":  "@{type=integer; maximum=5368709120.0; exclusiveMinimum=0.0; title=File Size Bytes}",
+                                                                                           "sha256":  "@{type=string; pattern=^[a-fA-F0-9]{64}$; title=Sha256}"
+                                                                                       },
+                                                                        "type":  "object",
+                                                                        "required":  [
+                                                                                         "session_id",
+                                                                                         "filename",
+                                                                                         "file_size_bytes",
+                                                                                         "sha256"
+                                                                                     ],
+                                                                        "title":  "MatrixVideoUploadRequest"
+                                                                    },
+                                       "ValidationError":  {
+                                                               "properties":  {
+                                                                                  "loc":  "@{items=; type=array; title=Location}",
+                                                                                  "msg":  "@{type=string; title=Message}",
+                                                                                  "type":  "@{type=string; title=Error Type}",
+                                                                                  "input":  "@{title=Input}",
+                                                                                  "ctx":  "@{type=object; title=Context}"
+                                                                              },
+                                                               "type":  "object",
+                                                               "required":  [
+                                                                                "loc",
+                                                                                "msg",
+                                                                                "type"
+                                                                            ],
+                                                               "title":  "ValidationError"
+                                                           }
+                                   },
+                       "securitySchemes":  {
+                                               "HTTPBearer":  {
+                                                                  "type":  "http",
+                                                                  "scheme":  "bearer"
+                                                              }
+                                           }
+                   }
+}

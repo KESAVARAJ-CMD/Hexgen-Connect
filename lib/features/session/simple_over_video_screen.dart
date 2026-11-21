@@ -1,6 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:gal/gal.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../core/network/matrix_api_service.dart';
 import '../../core/services/favorites_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/hexgen_button.dart';
@@ -8,8 +15,6 @@ import '../../models/pose_data.dart';
 import '../coach/ask_coach_screen.dart';
 import '../../widgets/athlete_story_viewer.dart';
 import '../../widgets/session_video_stage.dart';
-
-const String _defaultVideoAsset = 'assets/U15S125O3B1.mp4';
 
 class SimpleOverVideoScreen extends StatefulWidget {
   final String sessionTitle;
@@ -19,7 +24,18 @@ class SimpleOverVideoScreen extends StatefulWidget {
   final String lane;
   final String speed;
   final String ballsSummary;
-  final String videoAsset;
+  final String? videoAsset;
+  final String? videoPath;
+  final String? streamUrl;
+  final Map<int, String>? ballVideos;
+  final int initialBallIndex;
+  final String? bowlerType;
+  final String? variation;
+  final String? styleDisplay;
+  final String? armType;
+  final String? pitchLine;
+  final String? pitchLength;
+  final Map<String, dynamic>? overData;
 
   const SimpleOverVideoScreen({
     super.key,
@@ -28,13 +44,21 @@ class SimpleOverVideoScreen extends StatefulWidget {
     this.overType = 'Pace Practice',
     this.date = 'Today • 06:00 PM',
     this.lane = 'Lane 3 (Turf Pitch)',
-    this.speed = '142 km/h',
+    this.speed = '70 km/h',
     this.ballsSummary = '6 Balls • 0 Wickets • 4 Runs',
-    this.videoAsset = _defaultVideoAsset,
+    this.videoAsset,
+    this.videoPath,
+    this.streamUrl,
+    this.ballVideos,
     this.initialBallIndex = 0,
+    this.bowlerType,
+    this.variation,
+    this.styleDisplay,
+    this.armType,
+    this.pitchLine,
+    this.pitchLength,
+    this.overData,
   });
-
-  final int initialBallIndex;
 
   @override
   State<SimpleOverVideoScreen> createState() => _SimpleOverVideoScreenState();
@@ -44,13 +68,61 @@ class _SimpleOverVideoScreenState extends State<SimpleOverVideoScreen> {
   late int _selectedBallIndex;
   final FavoritesService _favoritesService = FavoritesService();
   Set<String> _highlightedBallIds = {};
+  String? _resolvedStreamUrl;
+  late List<Map<String, String>> _balls;
 
   @override
   void initState() {
     super.initState();
-    _selectedBallIndex = widget.initialBallIndex.clamp(0, _balls.length - 1);
+    _balls = _buildBallsList();
+    _selectedBallIndex = widget.initialBallIndex.clamp(0, _balls.isNotEmpty ? _balls.length - 1 : 0);
     _favoritesService.addListener(_onFavoritesChanged);
     _loadHighlightStatus();
+    _resolveCloudVideoUrl();
+  }
+
+  @override
+  void didUpdateWidget(SimpleOverVideoScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.speed != widget.speed ||
+        oldWidget.overType != widget.overType ||
+        oldWidget.ballVideos != widget.ballVideos ||
+        oldWidget.overData != widget.overData ||
+        oldWidget.bowlerType != widget.bowlerType) {
+      setState(() {
+        _balls = _buildBallsList();
+        _selectedBallIndex = _selectedBallIndex.clamp(0, _balls.isNotEmpty ? _balls.length - 1 : 0);
+      });
+    }
+  }
+
+  Future<void> _resolveCloudVideoUrl() async {
+    final currentBallNum = _selectedBallIndex + 1;
+
+    // 1. Check if this specific ball has a cloud video path
+    String? targetVideoPath;
+    if (widget.ballVideos != null) {
+      targetVideoPath = widget.ballVideos![currentBallNum];
+    } else if (currentBallNum == 1) {
+      targetVideoPath = widget.videoPath;
+    }
+
+    if (targetVideoPath != null && targetVideoPath.isNotEmpty) {
+      if (currentBallNum == 1 && widget.streamUrl != null && widget.streamUrl!.isNotEmpty) {
+        if (mounted) setState(() => _resolvedStreamUrl = widget.streamUrl);
+        return;
+      }
+      final playUrl = await MatrixApiService().getPlaybackUrl(targetVideoPath);
+      if (mounted) {
+        setState(() => _resolvedStreamUrl = playUrl ?? '');
+      }
+      return;
+    }
+
+    // No video found for this ball in the cloud
+    if (mounted) {
+      setState(() => _resolvedStreamUrl = '');
+    }
   }
 
   @override
@@ -89,68 +161,71 @@ class _SimpleOverVideoScreenState extends State<SimpleOverVideoScreen> {
     } catch (_) {}
   }
 
-  static const _balls = [
-    {
-      'ball': 'Ball 1',
-      'desc': 'Good Length • Defended',
-      'speed': '138.8 km/h',
-      'line': 'Outside Off',
-      'length': 'Good Length',
-      'ballType': 'Fast Seam',
-      'armType': 'Right Arm',
-      'shot': 'Forward Defense',
-    },
-    {
-      'ball': 'Ball 2',
-      'desc': 'Outside Off • Left alone',
-      'speed': '140.2 km/h',
-      'line': '4th Stump',
-      'length': 'Good Length',
-      'ballType': 'Out-Swinger',
-      'armType': 'Right Arm',
-      'shot': 'Leave Alone',
-    },
-    {
-      'ball': 'Ball 3',
-      'desc': 'Full Pitch • Cover Drive (4 Runs)',
-      'speed': '142.4 km/h',
-      'line': 'Off Stump',
-      'length': 'Full Pitch',
-      'ballType': 'Fast Pace',
-      'armType': 'Right Arm',
-      'shot': 'Cover Drive',
-    },
-    {
-      'ball': 'Ball 4',
-      'desc': 'In-swinger • Play & Miss',
-      'speed': '139.5 km/h',
-      'line': 'Middle & Leg',
-      'length': 'Full Length',
-      'ballType': 'In-Swinger',
-      'armType': 'Right Arm',
-      'shot': 'On-Drive',
-    },
-    {
-      'ball': 'Ball 5',
-      'desc': 'Short of Length • Single',
-      'speed': '137.0 km/h',
-      'line': 'Outside Off',
-      'length': 'Short Length',
-      'ballType': 'Back of Length',
-      'armType': 'Right Arm',
-      'shot': 'Back-Foot Punch',
-    },
-    {
-      'ball': 'Ball 6',
-      'desc': 'Good Length • Solid Defense',
-      'speed': '141.0 km/h',
-      'line': 'Off Stump',
-      'length': 'Good Length',
-      'ballType': 'Straight Seam',
-      'armType': 'Right Arm',
-      'shot': 'Forward Defense',
-    },
-  ];
+  List<Map<String, String>> _buildBallsList() {
+    final int totalBalls = widget.overData?['balls'] as int? ?? 6;
+    final realSpeedStr = widget.speed.replaceAll(' km/h', '').trim();
+    final double baseSpeed = double.tryParse(realSpeedStr) ?? 70.0;
+    final String rawBowlerType = widget.bowlerType ??
+        widget.overData?['bowler_type'] as String? ??
+        'PACE';
+    final String bowlerType = rawBowlerType.toUpperCase() == 'PACE'
+        ? 'Pace'
+        : rawBowlerType.toUpperCase() == 'OFFSPIN'
+            ? 'Offspin'
+            : rawBowlerType.toUpperCase() == 'WRIST'
+                ? 'Wrist Spin'
+                : rawBowlerType;
+
+    final String? variation = widget.variation ??
+        widget.overData?['variation'] as String?;
+
+    final String styleDisplay = widget.styleDisplay ??
+        widget.overData?['type'] as String? ??
+        (variation != null && variation.isNotEmpty ? '$bowlerType • $variation' : bowlerType);
+
+    final String armType = widget.armType ??
+        widget.overData?['session_arm_type'] as String? ??
+        'Right Arm';
+
+    final String rawLength = widget.pitchLength ??
+        widget.overData?['session_length'] as String? ??
+        'Good Length';
+    final String pitchLength = rawLength.toLowerCase().contains('length')
+        ? rawLength
+        : '$rawLength Length';
+
+    return List.generate(totalBalls, (i) {
+      final ballNum = i + 1;
+
+      // Real delivery speed from cloud
+      final ballSpeed = '${baseSpeed.toStringAsFixed(1)} km/h';
+
+      // Real pitch line based on real cloud bowling variation
+      final String pitchLine;
+      if (variation?.toUpperCase() == 'SWING') {
+        pitchLine = ballNum % 2 == 1 ? 'Off Stump' : 'Outside Off';
+      } else if (rawBowlerType.toUpperCase() == 'OFFSPIN') {
+        pitchLine = 'Off & Middle';
+      } else if (rawBowlerType.toUpperCase() == 'WRIST') {
+        pitchLine = 'Middle Stump';
+      } else {
+        pitchLine = 'Outside Off';
+      }
+
+      final String deliveryDesc = '$styleDisplay • $pitchLength';
+
+      return {
+        'ball': 'Ball $ballNum',
+        'desc': deliveryDesc,
+        'speed': ballSpeed,
+        'line': pitchLine,
+        'length': pitchLength,
+        'ballType': styleDisplay,
+        'armType': armType,
+        'shot': '$ballNum Delivery ($styleDisplay)',
+      };
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -286,6 +361,27 @@ class _SimpleOverVideoScreenState extends State<SimpleOverVideoScreen> {
               );
             },
           ),
+          Builder(
+            builder: (context) {
+              final activeBall = _balls[_selectedBallIndex];
+              return IconButton(
+                tooltip: 'Download Replay Video',
+                icon: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF1F5F9),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.download_rounded,
+                    color: Color(0xFF0F172A),
+                    size: 18,
+                  ),
+                ),
+                onPressed: () => _downloadCurrentVideo(context, activeBall),
+              );
+            },
+          ),
           const SizedBox(width: 8),
         ],
       ),
@@ -309,7 +405,7 @@ class _SimpleOverVideoScreenState extends State<SimpleOverVideoScreen> {
                   ],
                 ),
                 child: SessionVideoStage(
-                  assetPath: widget.videoAsset,
+                  assetPath: _resolvedStreamUrl ?? '',
                   keypoints: const <String, Keypoint>{},
                   title: '${widget.overName} - ${activeBall['ball']}',
                   subtitle: '${widget.overType} • ${activeBall['speed']}',
@@ -376,9 +472,16 @@ class _SimpleOverVideoScreenState extends State<SimpleOverVideoScreen> {
                       final ballId = '${widget.sessionTitle}_${widget.overName}_$ballName';
                       final isBallFav = _favoritesService.isFavorite(ballId);
                       final isBallHl = _isBallHighlighted(ballName);
+                      final int ballNum = index + 1;
+                      final bool ballHasVideo = widget.ballVideos != null
+                          ? widget.ballVideos!.containsKey(ballNum)
+                          : (ballNum == 1 && widget.videoPath != null && widget.videoPath!.isNotEmpty);
 
                       return GestureDetector(
-                        onTap: () => setState(() => _selectedBallIndex = index),
+                        onTap: () {
+                          setState(() => _selectedBallIndex = index);
+                          _resolveCloudVideoUrl();
+                        },
                         child: Stack(
                           clipBehavior: Clip.none,
                           children: [
@@ -476,13 +579,38 @@ class _SimpleOverVideoScreenState extends State<SimpleOverVideoScreen> {
                                   ),
                                 ),
                               ),
+                            if (ballHasVideo)
+                              Positioned(
+                                bottom: -2,
+                                right: -2,
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF0057FF),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.videocam_rounded,
+                                    size: 9,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       );
                     }),
                   ),
                   const SizedBox(height: 14),
-                  _buildHighlightShotButton(context, activeBall),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildHighlightShotButton(context, activeBall),
+                      ),
+                      const SizedBox(width: 8),
+                      _buildDownloadButton(context, activeBall),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -648,11 +776,17 @@ class _SimpleOverVideoScreenState extends State<SimpleOverVideoScreen> {
     final desc = activeBall['desc'] ?? '';
     final outcomeText = desc.contains('•') ? desc.split('•').last.trim() : desc;
 
-    final String speedTier = speedVal >= 140.0
+    final String speedTier = speedVal >= 135.0
         ? '⚡ Express Pace'
-        : speedVal >= 130.0
-            ? '🔥 Fast Seam'
-            : '🌀 Controlled Flight';
+        : speedVal >= 115.0
+            ? '🔥 Fast Pace'
+            : speedVal >= 90.0
+                ? '⚡ Medium Pace'
+                : (activeBall['ballType']?.toLowerCase().contains('spin') == true ||
+                   activeBall['ballType']?.toLowerCase().contains('wrist') == true ||
+                   activeBall['ballType']?.toLowerCase().contains('offspin') == true)
+                    ? '🌀 Spin Delivery'
+                    : '🎯 Target Delivery';
 
     return Container(
       decoration: BoxDecoration(
@@ -822,7 +956,7 @@ class _SimpleOverVideoScreenState extends State<SimpleOverVideoScreen> {
                     child: _buildTelemetryMetricTile(
                       label: 'BALL & ARM TYPE',
                       labelColor: const Color(0xFF6D28D9),
-                      value: activeBall['ballType'] ?? 'Fast Seam',
+                      value: activeBall['ballType'] ?? widget.overType,
                       subLabel: activeBall['armType'] ?? 'Right Arm',
                       subLabelColor: const Color(0xFF7C3AED),
                       icon: Icons.rotate_right_rounded,
@@ -844,7 +978,7 @@ class _SimpleOverVideoScreenState extends State<SimpleOverVideoScreen> {
                     child: _buildTelemetryMetricTile(
                       label: 'PITCH LINE',
                       labelColor: const Color(0xFFB45309),
-                      value: activeBall['line'] ?? 'Outside Off',
+                      value: activeBall['line'] ?? 'Off Stump',
                       subLabel: 'Target Channel',
                       subLabelColor: const Color(0xFFD97706),
                       icon: Icons.straighten_rounded,
@@ -1109,7 +1243,6 @@ class _SimpleOverVideoScreenState extends State<SimpleOverVideoScreen> {
 
   Widget _buildHighlightShotButton(BuildContext context, Map<String, String> activeBall) {
     final ballName = activeBall['ball'] ?? 'Ball 1';
-    final shotName = activeBall['shot'] ?? activeBall['desc'] ?? 'Shot';
     final isHl = _isBallHighlighted(ballName);
 
     return InkWell(
@@ -1153,11 +1286,11 @@ class _SimpleOverVideoScreenState extends State<SimpleOverVideoScreen> {
               child: Text(
                 isHl
                     ? '$ballName IS IN PROFILE HIGHLIGHTS ⭐'
-                    : 'ADD $ballName ($shotName) AS HIGHLIGHT ⭐',
+                    : 'ADD $ballName TO HIGHLIGHTS ⭐',
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
-                  fontSize: 12,
+                  fontSize: 12.5,
                   letterSpacing: 0.3,
                 ),
                 maxLines: 1,
@@ -1184,60 +1317,49 @@ class _SimpleOverVideoScreenState extends State<SimpleOverVideoScreen> {
     if (rawList != null && rawList.isNotEmpty) {
       for (final s in rawList) {
         try {
-          currentList.add(AthleteHighlightItem.fromJson(jsonDecode(s) as Map<String, dynamic>));
+          final item = AthleteHighlightItem.fromJson(jsonDecode(s) as Map<String, dynamic>);
+          final isDummy = item.id == 'hl_1' ||
+              item.id == 'hl_2' ||
+              item.id == 'hl_3' ||
+              item.id == 'hl_4' ||
+              (item.title == 'Cover Drive' && item.speed == '142 km/h') ||
+              (item.title == 'In-Swing' && item.speed == '138 km/h') ||
+              (item.title == 'Spin Drills' && item.speed == '78 km/h') ||
+              (item.title == 'Yorker Line' && item.speed == '140 km/h');
+          if (!isDummy) {
+            currentList.add(item);
+          }
         } catch (_) {}
       }
-    } else {
-      currentList = [
-        const AthleteHighlightItem(
-          id: 'hl_1',
-          title: 'Cover Drive',
-          speed: '142 km/h',
-          thumbnailUrl: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=200&auto=format&fit=crop&q=80',
-          icon: Icons.sports_cricket_rounded,
-          gradientColors: [Color(0xFF0052FF), Color(0xFF00D2FF)],
-        ),
-        const AthleteHighlightItem(
-          id: 'hl_2',
-          title: 'In-Swing',
-          speed: '138 km/h',
-          thumbnailUrl: 'https://images.unsplash.com/photo-1587280501635-68a0e82cd5ff?w=200&auto=format&fit=crop&q=80',
-          icon: Icons.air_rounded,
-          gradientColors: [Color(0xFFEF4444), Color(0xFFF59E0B)],
-        ),
-        const AthleteHighlightItem(
-          id: 'hl_3',
-          title: 'Spin Drills',
-          speed: '78 km/h',
-          thumbnailUrl: 'https://images.unsplash.com/photo-1599474924187-334a4ae5bd3c?w=200&auto=format&fit=crop&q=80',
-          icon: Icons.sync_rounded,
-          gradientColors: [Color(0xFF10B981), Color(0xFF06B6D4)],
-        ),
-        const AthleteHighlightItem(
-          id: 'hl_4',
-          title: 'Yorker Line',
-          speed: '140 km/h',
-          thumbnailUrl: 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=200&auto=format&fit=crop&q=80',
-          icon: Icons.bolt_rounded,
-          gradientColors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
-        ),
-      ];
     }
 
     final existingIndex = currentList.indexWhere((item) => item.id == ballId);
-    final shotName = activeBall['shot'] ?? activeBall['desc'] ?? ballName;
     final ballSpeed = activeBall['speed'] ?? widget.speed;
+
+    // Resolve cloud video path for this specific ball
+    final currentBallNum = _selectedBallIndex + 1;
+    String? ballCloudVideoPath;
+    if (widget.ballVideos != null && widget.ballVideos!.containsKey(currentBallNum)) {
+      ballCloudVideoPath = widget.ballVideos![currentBallNum];
+    } else if (currentBallNum == 1 && widget.videoPath != null && widget.videoPath!.isNotEmpty) {
+      ballCloudVideoPath = widget.videoPath;
+    }
+
+    // Meaningful sports title: Over 01 • Ball 1
+    final highlightTitle = '${widget.overName} • $ballName';
 
     final newItem = AthleteHighlightItem(
       id: ballId,
-      title: shotName,
+      title: highlightTitle,
       speed: ballSpeed,
       lane: '${widget.lane} • ${widget.overName}',
       date: widget.date,
-      thumbnailUrl: _thumbnailForShot(shotName, activeBall['ballType'] ?? ''),
+      thumbnailUrl: null,
       icon: Icons.sports_cricket_rounded,
       gradientColors: const [Color(0xFF0052FF), Color(0xFF00D2FF)],
       videoAsset: widget.videoAsset,
+      videoPath: ballCloudVideoPath,
+      streamUrl: _resolvedStreamUrl,
     );
 
     if (existingIndex >= 0) {
@@ -1265,7 +1387,7 @@ class _SimpleOverVideoScreenState extends State<SimpleOverVideoScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Added $shotName to Profile Highlights! ⭐',
+                    'Added $highlightTitle to Profile Highlights! ⭐',
                     style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 13),
                   ),
                   Text(
@@ -1282,20 +1404,522 @@ class _SimpleOverVideoScreenState extends State<SimpleOverVideoScreen> {
     );
   }
 
-  static String _thumbnailForShot(String shot, String ballType) {
-    final s = shot.toLowerCase();
-    final b = ballType.toLowerCase();
-    if (s.contains('cover') || s.contains('drive')) {
-      return 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=200&auto=format&fit=crop&q=80';
-    } else if (s.contains('defense') || s.contains('defend')) {
-      return 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=200&auto=format&fit=crop&q=80';
-    } else if (s.contains('pull') || s.contains('hook') || s.contains('punch')) {
-      return 'https://images.unsplash.com/photo-1587280501635-68a0e82cd5ff?w=200&auto=format&fit=crop&q=80';
-    } else if (b.contains('spin') || s.contains('spin') || s.contains('sweep')) {
-      return 'https://images.unsplash.com/photo-1599474924187-334a4ae5bd3c?w=200&auto=format&fit=crop&q=80';
-    } else if (b.contains('swing') || b.contains('fast') || b.contains('seam')) {
-      return 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=200&auto=format&fit=crop&q=80';
+  Widget _buildDownloadButton(BuildContext context, Map<String, String> activeBall) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => _downloadCurrentVideo(context, activeBall),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0F172A), Color(0xFF334155)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0F172A).withValues(alpha: 0.22),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.download_rounded, color: Colors.white, size: 18),
+            SizedBox(width: 6),
+            Text(
+              'DOWNLOAD',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 12,
+                letterSpacing: 0.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _downloadCurrentVideo(
+    BuildContext context,
+    Map<String, String> activeBall,
+  ) async {
+    final currentBallNum = _selectedBallIndex + 1;
+    final ballName = activeBall['ball'] ?? 'Ball $currentBallNum';
+    final ballSpeed = activeBall['speed'] ?? widget.speed;
+
+    // Resolve cloud video path for this specific ball
+    String? targetVideoPath;
+    if (widget.ballVideos != null && widget.ballVideos!.containsKey(currentBallNum)) {
+      targetVideoPath = widget.ballVideos![currentBallNum];
+    } else if (currentBallNum == 1 && widget.videoPath != null && widget.videoPath!.isNotEmpty) {
+      targetVideoPath = widget.videoPath;
     }
-    return 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=200&auto=format&fit=crop&q=80';
+
+    var downloadUrl = _resolvedStreamUrl;
+    if ((downloadUrl == null || downloadUrl.isEmpty) && targetVideoPath != null && targetVideoPath.isNotEmpty) {
+      try {
+        downloadUrl = await MatrixApiService().getPlaybackUrl(targetVideoPath);
+      } catch (_) {}
+    }
+
+    if (downloadUrl == null || downloadUrl.isEmpty) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+          content: Row(
+            children: [
+              const Icon(Icons.videocam_off_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'No recorded video replay available for $ballName to download.',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (!context.mounted) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => _DownloadVideoBottomSheet(
+        sessionTitle: widget.sessionTitle,
+        overName: widget.overName,
+        ballName: ballName,
+        speed: ballSpeed,
+        downloadUrl: downloadUrl!,
+      ),
+    );
   }
 }
+
+class _DownloadVideoBottomSheet extends StatefulWidget {
+  final String sessionTitle;
+  final String overName;
+  final String ballName;
+  final String speed;
+  final String downloadUrl;
+
+  const _DownloadVideoBottomSheet({
+    required this.sessionTitle,
+    required this.overName,
+    required this.ballName,
+    required this.speed,
+    required this.downloadUrl,
+  });
+
+  @override
+  State<_DownloadVideoBottomSheet> createState() => _DownloadVideoBottomSheetState();
+}
+
+class _DownloadVideoBottomSheetState extends State<_DownloadVideoBottomSheet> {
+  bool _isDownloading = true;
+  double _progress = 0.0;
+  String _statusText = 'Connecting to Cloudflare R2...';
+  String? _errorMessage;
+  bool _savedToGallery = false;
+  bool _savedToDownloads = false;
+  File? _downloadedFile;
+
+  @override
+  void initState() {
+    super.initState();
+    _startDownload();
+  }
+
+  Future<void> _startDownload() async {
+    try {
+      final client = http.Client();
+      final request = http.Request('GET', Uri.parse(widget.downloadUrl));
+      final response = await client.send(request);
+
+      if (response.statusCode != 200) {
+        throw Exception('Download failed with status ${response.statusCode}');
+      }
+
+      final contentLength = response.contentLength ?? 0;
+      final List<int> bytes = [];
+      int received = 0;
+
+      await for (final chunk in response.stream) {
+        bytes.addAll(chunk);
+        received += chunk.length;
+        if (mounted && contentLength > 0) {
+          setState(() {
+            _progress = (received / contentLength).clamp(0.0, 1.0);
+            final mbReceived = (received / (1024 * 1024)).toStringAsFixed(1);
+            final mbTotal = (contentLength / (1024 * 1024)).toStringAsFixed(1);
+            _statusText = 'Downloading: $mbReceived MB / $mbTotal MB (${(_progress * 100).toInt()}%)';
+          });
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _statusText = 'Saving video to device...';
+        });
+      }
+
+      final tempDir = await getTemporaryDirectory();
+      final safeSession = widget.sessionTitle.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+      final safeOver = widget.overName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+      final safeBall = widget.ballName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+      final fileName = 'Hexgen_${safeSession}_${safeOver}_$safeBall.mp4';
+      final tempFile = File('${tempDir.path}/$fileName');
+      await tempFile.writeAsBytes(bytes);
+
+      bool gallerySaved = false;
+      try {
+        await Gal.putVideo(tempFile.path);
+        gallerySaved = true;
+      } catch (e) {
+        debugPrint('[Download] Gal putVideo error: $e');
+      }
+
+      bool downloadsSaved = false;
+      try {
+        if (Platform.isAndroid) {
+          final pubDir = Directory('/storage/emulated/0/Download');
+          if (pubDir.existsSync()) {
+            final pubFile = File('${pubDir.path}/$fileName');
+            await pubFile.writeAsBytes(bytes);
+            downloadsSaved = true;
+          }
+        }
+      } catch (e) {
+        debugPrint('[Download] Public folder error: $e');
+      }
+
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+          _savedToGallery = gallerySaved;
+          _savedToDownloads = downloadsSaved;
+          _downloadedFile = tempFile;
+        });
+      }
+    } catch (e) {
+      debugPrint('[Download] Error: $e');
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+          _errorMessage = e.toString();
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Drag handle
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFCBD5E1),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+
+          // Header
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: _errorMessage != null
+                        ? [const Color(0xFFEF4444), const Color(0xFFF87171)]
+                        : _isDownloading
+                            ? [const Color(0xFF0052FF), const Color(0xFF00D2FF)]
+                            : [const Color(0xFF059669), const Color(0xFF10B981)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (_errorMessage != null
+                              ? const Color(0xFFEF4444)
+                              : _isDownloading
+                                  ? const Color(0xFF0052FF)
+                                  : const Color(0xFF10B981))
+                          .withValues(alpha: 0.25),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  _errorMessage != null
+                      ? Icons.error_outline_rounded
+                      : _isDownloading
+                          ? Icons.downloading_rounded
+                          : Icons.check_circle_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${widget.overName} • ${widget.ballName}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: AppTheme.navyBlue,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${widget.speed} • Full HD MP4 Replay',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded, color: Color(0xFF94A3B8)),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // State 1: Downloading
+          if (_isDownloading) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: _progress > 0 ? _progress : null,
+                minHeight: 8,
+                backgroundColor: const Color(0xFFE2E8F0),
+                valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.electricBlue),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    _statusText,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF475569),
+                    ),
+                  ),
+                ),
+                if (_progress > 0)
+                  Text(
+                    '${(_progress * 100).toInt()}%',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      color: AppTheme.electricBlue,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Row(
+              children: [
+                Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFF94A3B8)),
+                SizedBox(width: 6),
+                Text(
+                  'Downloading directly from Cloudflare R2 storage',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                ),
+              ],
+            ),
+          ]
+
+          // State 2: Error
+          else if (_errorMessage != null) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFECACA)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Download issue: $_errorMessage',
+                      style: const TextStyle(color: Color(0xFF991B1B), fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.electricBlue,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                icon: const Icon(Icons.open_in_browser_rounded, color: Colors.white, size: 18),
+                label: const Text(
+                  'Download via Browser Instead',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+                onPressed: () {
+                  Navigator.pop(context);
+                  launchUrl(Uri.parse(widget.downloadUrl), mode: LaunchMode.externalApplication);
+                },
+              ),
+            ),
+          ]
+
+          // State 3: Download Finished
+          else ...[
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFF0FDF4), Color(0xFFDCFCE7)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF86EFAC)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Video Successfully Downloaded!',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF14532D),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  if (_savedToGallery)
+                    const Row(
+                      children: [
+                        Icon(Icons.photo_library_rounded, size: 14, color: Color(0xFF15803D)),
+                        SizedBox(width: 6),
+                        Text(
+                          'Saved to Device Photos / Gallery',
+                          style: TextStyle(fontSize: 12, color: Color(0xFF15803D), fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  if (_savedToDownloads) ...[
+                    const SizedBox(height: 2),
+                    const Row(
+                      children: [
+                        Icon(Icons.folder_rounded, size: 14, color: Color(0xFF15803D)),
+                        SizedBox(width: 6),
+                        Text(
+                          'Saved to Downloads folder',
+                          style: TextStyle(fontSize: 12, color: Color(0xFF15803D), fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            // Action Buttons
+            Row(
+              children: [
+                if (_downloadedFile != null)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: Color(0xFFCBD5E1)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      icon: const Icon(Icons.share_rounded, size: 18, color: AppTheme.navyBlue),
+                      label: const Text(
+                        'Share / Send',
+                        style: TextStyle(color: AppTheme.navyBlue, fontWeight: FontWeight.bold),
+                      ),
+                      onPressed: () {
+                        SharePlus.instance.share(
+                          ShareParams(
+                            files: [XFile(_downloadedFile!.path, mimeType: 'video/mp4')],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                if (_downloadedFile != null) const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.navyBlue,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'Done',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+

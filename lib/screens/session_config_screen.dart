@@ -50,11 +50,15 @@ class OverConfig {
 class SessionConfigScreen extends StatefulWidget {
   final bool isCreatingPracticeSession;
   final String? initialSessionTitle;
+  final int initialOversCount;
+  final SessionItem? sessionToEdit;
 
   const SessionConfigScreen({
     super.key,
     this.isCreatingPracticeSession = true,
     this.initialSessionTitle,
+    this.initialOversCount = 6,
+    this.sessionToEdit,
   });
 
   @override
@@ -62,18 +66,87 @@ class SessionConfigScreen extends StatefulWidget {
 }
 
 class _SessionConfigScreenState extends State<SessionConfigScreen> {
+  int _totalOvers = 6;
   int _selectedOver = 1;
   final TextEditingController _sessionNameController = TextEditingController();
 
   final Map<int, OverConfig> _overConfigs = {
-    for (int i = 1; i <= 6; i++) i: OverConfig(),
+    for (int i = 1; i <= 10; i++) i: OverConfig(),
   };
+
+  void _updateTotalOvers(int newTotal) {
+    if (newTotal < 1 || newTotal > 10) return;
+    setState(() {
+      _totalOvers = newTotal;
+      if (_selectedOver > _totalOvers) {
+        _selectedOver = _totalOvers;
+      }
+      for (int i = 1; i <= _totalOvers; i++) {
+        _overConfigs.putIfAbsent(i, () => OverConfig());
+      }
+    });
+  }
 
   @override
   void initState() {
     super.initState();
-    if (widget.initialSessionTitle != null && widget.initialSessionTitle!.isNotEmpty) {
-      _sessionNameController.text = widget.initialSessionTitle!;
+    if (widget.sessionToEdit != null) {
+      final s = widget.sessionToEdit!;
+      _sessionNameController.text = s.name;
+
+      final speedVal = double.tryParse(s.speed.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 90.0;
+
+      int count = s.overs.isNotEmpty ? s.overs.length : 6;
+      final match = RegExp(r'\d+').firstMatch(s.oversCount);
+      if (match != null) {
+        final parsed = int.tryParse(match.group(0)!);
+        if (parsed != null && parsed >= 1 && parsed <= 10) {
+          count = parsed;
+        }
+      }
+      _totalOvers = count;
+
+      for (int i = 1; i <= 10; i++) {
+        double overSpeed = speedVal;
+        String overVariation = s.variation;
+        String overBowlerType = s.bowlerType;
+        String overDirection = s.direction;
+
+        if (i <= s.overs.length) {
+          final overMap = s.overs[i - 1];
+          if (overMap['speed'] != null) {
+            overSpeed = double.tryParse(overMap['speed'].toString().replaceAll(RegExp(r'[^0-9.]'), '')) ?? speedVal;
+          }
+          if (overMap['type'] != null) {
+            final typeStr = overMap['type'].toString();
+            if (typeStr.contains('Spin')) {
+              overBowlerType = 'Spin';
+            } else if (typeStr.contains('Pace')) {
+              overBowlerType = 'Pace';
+            }
+          }
+        }
+
+        _overConfigs[i] = OverConfig(
+          ballSpeed: overSpeed,
+          selectedArm: s.armType,
+          selectedBowlerType: overBowlerType,
+          selectedLength: s.length,
+          selectedVariation: overVariation,
+          selectedDirection: overDirection,
+          selectedLevel: s.level,
+        );
+      }
+    } else {
+      _totalOvers = (widget.initialOversCount >= 1 && widget.initialOversCount <= 10)
+          ? widget.initialOversCount
+          : 6;
+      final nextIdx = SessionsService().sessions.length + 1;
+      if (widget.initialSessionTitle != null && widget.initialSessionTitle!.isNotEmpty) {
+        _sessionNameController.text = widget.initialSessionTitle!;
+      } else {
+        _sessionNameController.text = 'session $nextIdx';
+      }
     }
   }
 
@@ -118,13 +191,13 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
   Future<void> _onSave() async {
     final sessionTitle = _sessionNameController.text.trim().isNotEmpty
         ? _sessionNameController.text.trim()
-        : 'Session Practice';
+        : (widget.sessionToEdit?.name ?? 'Practice');
 
     final List<Map<String, dynamic>> generatedOvers = [];
-    for (int i = 1; i <= 6; i++) {
+    for (int i = 1; i <= _totalOvers; i++) {
       final config = _overConfigs[i] ?? _currentConfig;
       generatedOvers.add({
-        'over': 'Over 0$i',
+        'over': 'Over ${i.toString().padLeft(2, '0')}',
         'summary': '6 Balls • ${config.ballSpeed.toStringAsFixed(1)} km/h • ${config.selectedVariation}',
         'speed': '${config.ballSpeed.toStringAsFixed(1)} km/h',
         'type': '${config.selectedBowlerType} - ${config.selectedVariation} (${config.selectedDirection})',
@@ -142,20 +215,54 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
     final minuteStr = now.minute.toString().padLeft(2, '0');
     final timeStr = '${hour.toString().padLeft(2, '0')}:$minuteStr $ampm';
 
+    if (widget.sessionToEdit != null) {
+      final existing = widget.sessionToEdit!;
+      final machineId = 'HEX-${(existing.id.hashCode.abs() % 9000 + 1000)}';
+      final updatedSession = existing.copyWith(
+        name: sessionTitle,
+        oversCount: '$_totalOvers ${_totalOvers == 1 ? "Over" : "Overs"}',
+        speed: '${_ballSpeed.toStringAsFixed(1)} km/h',
+        armType: _selectedArm,
+        bowlerType: _selectedBowlerType,
+        length: _selectedLength,
+        variation: _selectedVariation,
+        direction: _selectedDirection,
+        level: _selectedLevel,
+        overs: generatedOvers,
+      );
+
+      await SessionsService().updateSession(updatedSession);
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => SessionQrShareDialog(
+          sessionItem: updatedSession,
+          machineId: machineId,
+          onDone: () {
+            Navigator.pop(ctx); // Close dialog
+            Navigator.pop(context, true); // Close SessionConfigScreen
+          },
+        ),
+      );
+      return;
+    }
+
     final nextIndex = SessionsService().sessions.length + 1;
+    final sessionTag = 'session $nextIndex';
     final machineId = 'HEX-${(sessionTitle.hashCode.abs() % 9000 + 1000)}';
 
     final newSession = SessionItem(
       id: 'SES-${nextIndex.toString().padLeft(2, '0')}',
-      title: sessionTitle.toLowerCase().startsWith('session')
-          ? sessionTitle
-          : 'Session $nextIndex',
-      name: sessionTitle,
+      title: sessionTag,
+      name: sessionTitle.trim().isNotEmpty ? sessionTitle.trim() : sessionTag,
       date: dateStr,
       time: timeStr,
       lane: 'Hexgen Turf',
       coach: 'Self Practice',
-      oversCount: '6 Overs',
+      oversCount: '$_totalOvers ${_totalOvers == 1 ? "Over" : "Overs"}',
       speed: '${_ballSpeed.toStringAsFixed(1)} km/h',
       armType: _selectedArm,
       bowlerType: _selectedBowlerType,
@@ -163,6 +270,7 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
       variation: _selectedVariation,
       direction: _selectedDirection,
       level: _selectedLevel,
+      isUpcoming: true,
       overs: generatedOvers,
     );
 
@@ -188,7 +296,7 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
   void _onCopyToAllOvers() {
     final current = _currentConfig;
     setState(() {
-      for (int i = 1; i <= 6; i++) {
+      for (int i = 1; i <= _totalOvers; i++) {
         _overConfigs[i] = current.clone();
       }
     });
@@ -196,7 +304,7 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Over $_selectedOver settings copied to all 6 overs!',
+          'Over $_selectedOver settings copied to all $_totalOvers overs!',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         behavior: SnackBarBehavior.floating,
@@ -235,7 +343,9 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        widget.initialSessionTitle ?? 'SESSION 1 CONFIGURATION',
+                        widget.sessionToEdit != null
+                            ? 'EDIT SESSION CONFIGURATION'
+                            : (widget.initialSessionTitle ?? 'SESSION CONFIGURATION'),
                         style: const TextStyle(
                           fontSize: 16.5,
                           fontWeight: FontWeight.w900,
@@ -320,73 +430,269 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
 
                       const SizedBox(height: 14),
 
-                      // ── Over Selector Row ────────────────────────────────────
-                      const Text(
-                        'Over',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                          color: AppTheme.navyBlue,
+                      // ── Total Overs Selector Card ────────────────────────────
+                      _buildCardContainer(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    _buildCardTitle('Total Overs'),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.electricBlue.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Text(
+                                        'Max 10',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppTheme.electricBlue,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                // Stepper: [-] X Overs [+]
+                                Container(
+                                  height: 38,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.remove_rounded, size: 18),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                                        color: _totalOvers > 1 ? AppTheme.navyBlue : const Color(0xFFCBD5E1),
+                                        onPressed: _totalOvers > 1 ? () => _updateTotalOvers(_totalOvers - 1) : null,
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                                        child: Text(
+                                          '$_totalOvers ${_totalOvers == 1 ? "Over" : "Overs"}',
+                                          style: const TextStyle(
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.w900,
+                                            color: AppTheme.navyBlue,
+                                          ),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.add_rounded, size: 18),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                                        color: _totalOvers < 10 ? AppTheme.electricBlue : const Color(0xFFCBD5E1),
+                                        onPressed: _totalOvers < 10 ? () => _updateTotalOvers(_totalOvers + 1) : null,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            // Quick Select Chips (1 to 10)
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              physics: const BouncingScrollPhysics(),
+                              child: Row(
+                                children: List.generate(10, (index) {
+                                  final count = index + 1;
+                                  final isCurrent = _totalOvers == count;
+                                  return Padding(
+                                    padding: EdgeInsets.only(right: index < 9 ? 8 : 0),
+                                    child: GestureDetector(
+                                      onTap: () => _updateTotalOvers(count),
+                                      child: AnimatedContainer(
+                                        duration: const Duration(milliseconds: 180),
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          gradient: isCurrent ? AppTheme.primaryCtaGradient : null,
+                                          color: isCurrent ? null : Colors.white,
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: isCurrent ? Colors.transparent : const Color(0xFFE2E8F0),
+                                            width: 1.2,
+                                          ),
+                                          boxShadow: isCurrent
+                                              ? [
+                                                  BoxShadow(
+                                                    color: AppTheme.electricBlue.withValues(alpha: 0.3),
+                                                    blurRadius: 6,
+                                                    offset: const Offset(0, 2),
+                                                  ),
+                                                ]
+                                              : null,
+                                        ),
+                                        child: Text(
+                                          '$count ${count == 1 ? "Over" : "Overs"}',
+                                          style: TextStyle(
+                                            fontSize: 12.5,
+                                            fontWeight: isCurrent ? FontWeight.w900 : FontWeight.w700,
+                                            color: isCurrent ? Colors.white : AppTheme.navyBlue,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 8),
 
-                      // Over Number Chips (1 - 6)
+                      const SizedBox(height: 14),
+
+                      // ── Over Selector Row ────────────────────────────────────
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: List.generate(6, (index) {
-                          final overNum = index + 1;
-                          final isSelected = _selectedOver == overNum;
-
-                          return GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _selectedOver = overNum;
-                              });
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 180),
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                gradient: isSelected ? AppTheme.primaryCtaGradient : null,
-                                color: isSelected ? null : Colors.white,
-                                borderRadius: BorderRadius.circular(14),
-                                border: isSelected
-                                    ? null
-                                    : Border.all(
-                                        color: const Color(0xFFE2E8F0),
-                                        width: 1.2,
-                                      ),
-                                boxShadow: isSelected
-                                    ? [
-                                        BoxShadow(
-                                          color: AppTheme.electricBlue.withValues(alpha: 0.35),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 3),
-                                        ),
-                                      ]
-                                    : [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.02),
-                                          blurRadius: 6,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
+                        children: [
+                          Row(
+                            children: [
+                              const Text(
+                                'Over',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppTheme.navyBlue,
+                                ),
                               ),
-                              child: Center(
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.electricBlue.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                                 child: Text(
-                                  '$overNum',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w900,
-                                    color: isSelected ? Colors.white : AppTheme.navyBlue,
+                                  'Over $_selectedOver of $_totalOvers',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.electricBlue,
                                   ),
                                 ),
                               ),
+                            ],
+                          ),
+                          Text(
+                            '$_totalOvers ${_totalOvers == 1 ? "Over" : "Overs"} Selected',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF64748B),
                             ),
-                          );
-                        }),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Over Number Chips (1 - _totalOvers) + Add Over Option
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        child: Row(
+                          children: [
+                            ...List.generate(_totalOvers, (index) {
+                              final overNum = index + 1;
+                              final isSelected = _selectedOver == overNum;
+
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedOver = overNum;
+                                    });
+                                  },
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 180),
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      gradient: isSelected ? AppTheme.primaryCtaGradient : null,
+                                      color: isSelected ? null : Colors.white,
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: isSelected
+                                          ? null
+                                          : Border.all(
+                                              color: const Color(0xFFE2E8F0),
+                                              width: 1.2,
+                                            ),
+                                      boxShadow: isSelected
+                                          ? [
+                                              BoxShadow(
+                                                color: AppTheme.electricBlue.withValues(alpha: 0.35),
+                                                blurRadius: 10,
+                                                offset: const Offset(0, 3),
+                                              ),
+                                            ]
+                                          : [
+                                              BoxShadow(
+                                                color: Colors.black.withValues(alpha: 0.02),
+                                                blurRadius: 6,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        '$overNum',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w900,
+                                          color: isSelected ? Colors.white : AppTheme.navyBlue,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }),
+                            if (_totalOvers < 10)
+                              GestureDetector(
+                                onTap: () => _updateTotalOvers(_totalOvers + 1),
+                                child: Container(
+                                  height: 48,
+                                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: AppTheme.electricBlue.withValues(alpha: 0.4),
+                                      width: 1.2,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: const [
+                                      Icon(Icons.add_rounded, color: AppTheme.electricBlue, size: 20),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Add Over',
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppTheme.electricBlue,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
 
                       const SizedBox(height: 14),
@@ -725,10 +1031,10 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                               ),
                             ],
                           ),
-                          child: const Center(
+                          child: Center(
                             child: Text(
-                              'Save',
-                              style: TextStyle(
+                              widget.sessionToEdit != null ? 'Update & Save' : 'Save',
+                              style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,

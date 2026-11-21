@@ -52,7 +52,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _skillLevel = 'Intermediate (Club)';
   int _totalSessionsCount = 12;
   int _totalOversFaced = 34;
-  int _savedDrillsCount = 8;
+  int _savedDrillsCount = 0;
   List<AthleteHighlightItem> _highlights = [];
   static const String _highlightsPrefKey = 'athlete_custom_highlights_v1';
 
@@ -94,67 +94,78 @@ class _ProfileScreenState extends State<ProfileScreen> {
       calculatedOvers += count;
     }
 
-    // Load or seed Athlete Highlights with real cricket action thumbnails
+    // Load Athlete Highlights (only real user highlights)
     final savedHighlightsJson = prefs.getStringList(_highlightsPrefKey);
     List<AthleteHighlightItem> loadedHighlights = [];
+    bool needsPurge = false;
     if (savedHighlightsJson != null && savedHighlightsJson.isNotEmpty) {
       for (final str in savedHighlightsJson) {
         try {
           final item = AthleteHighlightItem.fromJson(jsonDecode(str) as Map<String, dynamic>);
-          // Ensure thumbnail exists
-          if (item.thumbnailUrl == null || item.thumbnailUrl!.isEmpty) {
-            loadedHighlights.add(AthleteHighlightItem(
-              id: item.id,
-              title: item.title,
-              speed: item.speed,
-              lane: item.lane,
-              date: item.date,
-              thumbnailUrl: _defaultThumbnailForTitle(item.title),
-              icon: item.icon,
-              gradientColors: item.gradientColors,
-              videoAsset: item.videoAsset,
-            ));
-          } else {
-            loadedHighlights.add(item);
+          // Filter out legacy dummy seed items
+          final isDummy = item.id == 'hl_1' ||
+              item.id == 'hl_2' ||
+              item.id == 'hl_3' ||
+              item.id == 'hl_4' ||
+              (item.title == 'Cover Drive' && item.speed == '142 km/h') ||
+              (item.title == 'In-Swing' && item.speed == '138 km/h') ||
+              (item.title == 'Spin Drills' && item.speed == '78 km/h') ||
+              (item.title == 'Yorker Line' && item.speed == '140 km/h');
+          if (isDummy) {
+            needsPurge = true;
+            continue;
           }
+
+          // Auto-clean any title containing 'Recorded Replay'
+          String cleanTitle = item.title;
+          if (cleanTitle.toLowerCase().contains('recorded replay') ||
+              cleanTitle.toLowerCase().contains('standard delivery')) {
+            needsPurge = true;
+            if (item.id.contains('Ball')) {
+              final ballPart = item.id.split('_').lastWhere((e) => e.contains('Ball'), orElse: () => 'Ball 1');
+              cleanTitle = 'Over 01 • $ballPart';
+            } else {
+              cleanTitle = 'Over 01 • Ball 1';
+            }
+          }
+
+          // Auto-attach cloud videoPath if it was previously saved with null
+          String? cleanVideoPath = item.videoPath;
+          if (cleanVideoPath == null || cleanVideoPath.isEmpty) {
+            if (item.id.contains('Ball 1') || cleanTitle.contains('Ball 1')) {
+              cleanVideoPath = 'sessions/1/b08f02e375990f4af9c1d585be805dce52d5e29c16f0e88527fad2d3785b8452.mp4';
+              needsPurge = true;
+            } else if (item.id.contains('Ball 3') || cleanTitle.contains('Ball 3')) {
+              cleanVideoPath = 'sessions/1/5d22ac24280482fc3d2aad8f0741731171b64906bfdca062530956fadbb1879d.mp4';
+              needsPurge = true;
+            }
+          }
+
+          // Force thumbnailUrl to null to permanently purge mock Unsplash URLs
+          if (item.thumbnailUrl != null) {
+            needsPurge = true;
+          }
+
+          loadedHighlights.add(AthleteHighlightItem(
+            id: item.id,
+            title: cleanTitle,
+            speed: item.speed,
+            lane: item.lane,
+            date: item.date,
+            thumbnailUrl: null,
+            icon: item.icon,
+            gradientColors: item.gradientColors,
+            videoAsset: item.videoAsset,
+            videoPath: cleanVideoPath,
+            streamUrl: item.streamUrl,
+          ));
         } catch (_) {}
       }
     }
-    if (loadedHighlights.isEmpty) {
-      loadedHighlights = [
-        const AthleteHighlightItem(
-          id: 'hl_1',
-          title: 'Cover Drive',
-          speed: '142 km/h',
-          thumbnailUrl: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=200&auto=format&fit=crop&q=80',
-          icon: Icons.sports_cricket_rounded,
-          gradientColors: [Color(0xFF0052FF), Color(0xFF00D2FF)],
-        ),
-        const AthleteHighlightItem(
-          id: 'hl_2',
-          title: 'In-Swing',
-          speed: '138 km/h',
-          thumbnailUrl: 'https://images.unsplash.com/photo-1587280501635-68a0e82cd5ff?w=200&auto=format&fit=crop&q=80',
-          icon: Icons.air_rounded,
-          gradientColors: [Color(0xFFEF4444), Color(0xFFF59E0B)],
-        ),
-        const AthleteHighlightItem(
-          id: 'hl_3',
-          title: 'Spin Drills',
-          speed: '78 km/h',
-          thumbnailUrl: 'https://images.unsplash.com/photo-1599474924187-334a4ae5bd3c?w=200&auto=format&fit=crop&q=80',
-          icon: Icons.sync_rounded,
-          gradientColors: [Color(0xFF10B981), Color(0xFF06B6D4)],
-        ),
-        const AthleteHighlightItem(
-          id: 'hl_4',
-          title: 'Yorker Line',
-          speed: '140 km/h',
-          thumbnailUrl: 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=200&auto=format&fit=crop&q=80',
-          icon: Icons.bolt_rounded,
-          gradientColors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
-        ),
-      ];
+    // Clean stored prefs if items were updated or legacy items purged
+    if (needsPurge) {
+      final cleanList = loadedHighlights.map((h) => jsonEncode(h.toJson())).toList();
+      await prefs.setStringList(_highlightsPrefKey, cleanList);
     }
 
     if (mounted) {
@@ -178,20 +189,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
       widget.onProfileUpdated?.call();
     }
-  }
-
-  static String _defaultThumbnailForTitle(String title) {
-    final t = title.toLowerCase();
-    if (t.contains('cover') || t.contains('drive')) {
-      return 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=200&auto=format&fit=crop&q=80';
-    } else if (t.contains('swing') || t.contains('pace') || t.contains('fast')) {
-      return 'https://images.unsplash.com/photo-1587280501635-68a0e82cd5ff?w=200&auto=format&fit=crop&q=80';
-    } else if (t.contains('spin') || t.contains('turn')) {
-      return 'https://images.unsplash.com/photo-1599474924187-334a4ae5bd3c?w=200&auto=format&fit=crop&q=80';
-    } else if (t.contains('yorker') || t.contains('death')) {
-      return 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=200&auto=format&fit=crop&q=80';
-    }
-    return 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=200&auto=format&fit=crop&q=80';
   }
 
   Future<void> _saveHighlightsToPrefs() async {
@@ -632,52 +629,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
 
                 // ── 2. Instagram Story Highlights (Reels & Best Drills) ───────────────
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                      child: Text(
-                        'Athlete Highlights',
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
+                if (_highlights.isNotEmpty) ...[
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        child: Text(
+                          'Athlete Highlights',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0F172A),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    if (_highlights.isEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.stars_rounded, color: AppTheme.electricBlue, size: 20),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Watch any practice video and tap "Add as Highlight" to showcase your best shots here! 🏏',
-                                style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
+                      const SizedBox(height: 10),
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
                           children: _highlights.map((hl) => _buildHighlightBubble(hl)).toList(),
                         ),
                       ),
-                    const SizedBox(height: 14),
-                  ],
-                ),
+                      const SizedBox(height: 14),
+                    ],
+                  ),
+                ],
 
                 // ── 3. Cricket Specs & Details Card ─────────────────────────────
                 Container(
@@ -790,10 +767,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         iconBg: const Color(0xFFE0F2FE),
                         title: 'Sub Profiles',
                         subtitle: 'Switch or manage linked cricket profiles',
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const SubProfileScreen()),
-                        ),
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SubProfileScreen(
+                                onProfileSwitched: () {
+                                  _loadFromPrefs();
+                                  widget.onProfileUpdated?.call();
+                                },
+                              ),
+                            ),
+                          );
+                          _loadFromPrefs();
+                          widget.onProfileUpdated?.call();
+                        },
                       ),
                     ],
                   ),
@@ -1051,51 +1039,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildHighlightThumbnail(AthleteHighlightItem item) {
-    final thumb = item.thumbnailUrl;
-    if (thumb != null && thumb.isNotEmpty) {
-      if (thumb.startsWith('http')) {
-        return Image.network(
-          thumb,
-          width: 54,
-          height: 54,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => _buildFallbackDrillVisual(item),
-        );
-      } else if (thumb.startsWith('assets/')) {
-        return Image.asset(
-          thumb,
-          width: 54,
-          height: 54,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => _buildFallbackDrillVisual(item),
-        );
-      }
-    }
-    return _buildFallbackDrillVisual(item);
-  }
+    // If highlight has an associated video (Cloud videoPath, streamUrl, or videoAsset),
+    // freeze frame the actual video at 1 sec into the delivery action!
+    final hasVideo = (item.videoPath != null && item.videoPath!.isNotEmpty) ||
+        (item.streamUrl != null && item.streamUrl!.isNotEmpty) ||
+        (item.videoAsset != null && item.videoAsset!.isNotEmpty);
 
-  Widget _buildFallbackDrillVisual(AthleteHighlightItem item) {
+    if (hasVideo) {
+      return HighlightVideoFreezeBubble(
+        highlight: item,
+        size: 54,
+      );
+    }
+
+    // Fallback when no video is attached: Bowler icon
     return Container(
       width: 54,
       height: 54,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            item.gradientColors.first,
-            item.gradientColors.last,
-          ],
-        ),
-      ),
-      child: Center(
-        child: Text(
-          item.title.isNotEmpty ? item.title.substring(0, 1).toUpperCase() : '🏏',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-            fontSize: 18,
-          ),
+      color: const Color(0xFFF8FAFC),
+      padding: const EdgeInsets.all(9),
+      child: Image.asset(
+        'assets/Bowler_icon.png',
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => const Icon(
+          Icons.sports_cricket_rounded,
+          color: Color(0xFF64748B),
+          size: 22,
         ),
       ),
     );

@@ -1,9 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/services/profile_image_service.dart';
 import '../core/theme/app_theme.dart';
 import '../core/widgets/cyber_glass_backdrop.dart';
+import '../widgets/avatar_cropper_dialog.dart';
 import 'continue_with_screen.dart';
 
 class CompleteProfileScreen extends StatefulWidget {
@@ -50,6 +54,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     'Master',
   ];
 
+  String? _avatarPath;
   List<Map<String, dynamic>> _subProfiles = [];
   bool _isLoading = false;
 
@@ -62,7 +67,6 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   Future<void> _loadExistingData() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Load any existing profile info
     final existingName = prefs.getString('player_name') ?? '';
     if (existingName.isNotEmpty) {
       final parts = existingName.split(' ');
@@ -92,6 +96,8 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       _selectedLevelIndex = _levels.indexOf(existingLevel);
     }
 
+    _avatarPath = prefs.getString(ProfileImageService.avatarPrefKey);
+
     // Load sub-profiles
     final rawSubProfiles = prefs.getString(subProfilesPrefsKey);
     if (rawSubProfiles != null && rawSubProfiles.isNotEmpty) {
@@ -109,6 +115,137 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   Future<void> _saveSubProfiles() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(subProfilesPrefsKey, jsonEncode(_subProfiles));
+  }
+
+  Future<void> _pickAvatar() async {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFCBD5E1),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Choose Profile Photo',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.photo_library_rounded, color: Color(0xFF0052FF)),
+                ),
+                title: const Text(
+                  'Choose from Gallery',
+                  style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                ),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final picker = ImagePicker();
+                  final picked = await picker.pickImage(
+                    source: ImageSource.gallery,
+                    maxWidth: 1600,
+                    maxHeight: 1600,
+                    imageQuality: 95,
+                  );
+                  if (picked != null && mounted) {
+                    final croppedPath = await AvatarCropperDialog.show(
+                      context,
+                      File(picked.path),
+                    );
+                    if (croppedPath != null && mounted) {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setString(ProfileImageService.avatarPrefKey, croppedPath);
+                      setState(() => _avatarPath = croppedPath);
+                    }
+                  }
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.camera_alt_rounded, color: Color(0xFF0052FF)),
+                ),
+                title: const Text(
+                  'Take a Photo',
+                  style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                ),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final picker = ImagePicker();
+                  final picked = await picker.pickImage(
+                    source: ImageSource.camera,
+                    maxWidth: 1600,
+                    maxHeight: 1600,
+                    imageQuality: 95,
+                  );
+                  if (picked != null && mounted) {
+                    final croppedPath = await AvatarCropperDialog.show(
+                      context,
+                      File(picked.path),
+                    );
+                    if (croppedPath != null && mounted) {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setString(ProfileImageService.avatarPrefKey, croppedPath);
+                      setState(() => _avatarPath = croppedPath);
+                    }
+                  }
+                },
+              ),
+              if (_avatarPath != null)
+                ListTile(
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF1F2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.delete_outline_rounded, color: Color(0xFFE11D48)),
+                  ),
+                  title: const Text(
+                    'Remove Photo',
+                    style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFE11D48)),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await ProfileImageService.clearAvatar();
+                    if (mounted) setState(() => _avatarPath = null);
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -146,7 +283,6 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         'HX-${1000 + Random().nextInt(9000)}';
     final phone = widget.initialPhone ?? prefs.getString('player_phone') ?? '';
 
-    // Persist finalized profile
     await prefs.setBool('is_profile_completed', true);
     await prefs.setBool('is_logged_in', true);
     await prefs.setString('user_role', 'player');
@@ -162,16 +298,41 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     await prefs.setString('player_address', bio);
     await prefs.setString('player_bio', bio);
 
+    // Save profile to persistent multi-profile store
+    final profileRecord = {
+      'name': fullName,
+      'firstName': firstName,
+      'lastName': lastName,
+      'id': playerId,
+      'phone': phone,
+      'email': email,
+      'gender': gender,
+      'age': age,
+      'level': level,
+      'bio': bio,
+      'avatarPath': _avatarPath,
+    };
+    final allProfilesRaw = prefs.getString('hexgen_all_profiles_v1');
+    List<dynamic> allProfiles = [];
+    if (allProfilesRaw != null && allProfilesRaw.isNotEmpty) {
+      try {
+        allProfiles = jsonDecode(allProfilesRaw);
+      } catch (_) {}
+    }
+    allProfiles.removeWhere((p) => p['id'] == playerId);
+    allProfiles.add(profileRecord);
+    await prefs.setString('hexgen_all_profiles_v1', jsonEncode(allProfiles));
+
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    // Step 4 -> Step 5: Navigate to ContinueWithScreen
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ContinueWithScreen(
           playerName: fullName,
           playerId: playerId,
+          phone: phone,
         ),
       ),
     );
@@ -184,6 +345,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     final subAgeCtrl = TextEditingController();
     String subGender = 'Male';
     int subLevelIdx = 0;
+    String? subAvatarPath;
 
     showModalBottomSheet(
       context: context,
@@ -194,6 +356,132 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
+          Future<void> pickSubAvatar() async {
+            showModalBottomSheet(
+              context: context,
+              backgroundColor: Colors.white,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              builder: (pickerCtx) => SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFCBD5E1),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Choose Sub Profile Photo',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ListTile(
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.photo_library_rounded, color: Color(0xFF0052FF)),
+                        ),
+                        title: const Text(
+                          'Choose from Gallery',
+                          style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                        ),
+                        onTap: () async {
+                          Navigator.pop(pickerCtx);
+                          final picker = ImagePicker();
+                          final picked = await picker.pickImage(
+                            source: ImageSource.gallery,
+                            maxWidth: 1600,
+                            maxHeight: 1600,
+                            imageQuality: 95,
+                          );
+                          if (picked != null && context.mounted) {
+                            final croppedPath = await AvatarCropperDialog.show(
+                              context,
+                              File(picked.path),
+                            );
+                            if (croppedPath != null) {
+                              setModalState(() => subAvatarPath = croppedPath);
+                            }
+                          }
+                        },
+                      ),
+                      ListTile(
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.camera_alt_rounded, color: Color(0xFF0052FF)),
+                        ),
+                        title: const Text(
+                          'Take a Photo',
+                          style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                        ),
+                        onTap: () async {
+                          Navigator.pop(pickerCtx);
+                          final picker = ImagePicker();
+                          final picked = await picker.pickImage(
+                            source: ImageSource.camera,
+                            maxWidth: 1600,
+                            maxHeight: 1600,
+                            imageQuality: 95,
+                          );
+                          if (picked != null && context.mounted) {
+                            final croppedPath = await AvatarCropperDialog.show(
+                              context,
+                              File(picked.path),
+                            );
+                            if (croppedPath != null) {
+                              setModalState(() => subAvatarPath = croppedPath);
+                            }
+                          }
+                        },
+                      ),
+                      if (subAvatarPath != null)
+                        ListTile(
+                          leading: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF1F2),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.delete_outline_rounded, color: Color(0xFFE11D48)),
+                          ),
+                          title: const Text(
+                            'Remove Photo',
+                            style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFE11D48)),
+                          ),
+                          onTap: () {
+                            Navigator.pop(pickerCtx);
+                            setModalState(() => subAvatarPath = null);
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
+
           return Padding(
             padding: EdgeInsets.only(
               top: 20,
@@ -206,59 +494,174 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Add Sub Profile',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          color: AppTheme.navyBlue,
-                        ),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.person_add_alt_1_rounded, color: Color(0xFF0052FF), size: 20),
+                          ),
+                          const SizedBox(width: 10),
+                          const Text(
+                            'Add Sub Profile',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF0F172A),
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                        ],
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close_rounded, color: AppTheme.navyBlue),
+                        icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 22),
                         onPressed: () => Navigator.pop(ctx),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+
+                  const SizedBox(height: 16),
+
+                  // ── Sub Profile Avatar Picker (With Zoom / Crop) ───
+                  Center(
+                    child: Column(
+                      children: [
+                        Stack(
+                          children: [
+                            GestureDetector(
+                              onTap: pickSubAvatar,
+                              child: Container(
+                                width: 88,
+                                height: 88,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white,
+                                  border: Border.all(color: const Color(0xFFE2E8F0), width: 3),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF0052FF).withValues(alpha: 0.12),
+                                      blurRadius: 14,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: ClipOval(
+                                  child: subAvatarPath != null
+                                      ? Image.file(
+                                          File(subAvatarPath!),
+                                          fit: BoxFit.cover,
+                                        )
+                                      : Container(
+                                          color: const Color(0xFFF1F5F9),
+                                          child: const Icon(
+                                            Icons.person_rounded,
+                                            size: 46,
+                                            color: Color(0xFF94A3B8),
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: GestureDetector(
+                                onTap: pickSubAvatar,
+                                child: Container(
+                                  width: 30,
+                                  height: 30,
+                                  decoration: BoxDecoration(
+                                    gradient: AppTheme.primaryCtaGradient,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white, width: 2.2),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF0052FF).withValues(alpha: 0.3),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt_rounded,
+                                    color: Colors.white,
+                                    size: 15,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Upload Profile Photo',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 18),
                   _buildFieldLabel('First Name'),
                   const SizedBox(height: 6),
                   _buildInputBox(
                     controller: subFirstCtrl,
-                    hint: 'Enter sub profile first name',
+                    hint: 'Enter first name (e.g. Aarav)',
+                    prefixIcon: Icons.badge_outlined,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   _buildFieldLabel('Last Name'),
                   const SizedBox(height: 6),
                   _buildInputBox(
                     controller: subLastCtrl,
-                    hint: 'Enter sub profile last name',
+                    hint: 'Enter last name',
+                    prefixIcon: Icons.person_outline_rounded,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   _buildFieldLabel('Email (Optional)'),
                   const SizedBox(height: 6),
                   _buildInputBox(
                     controller: subEmailCtrl,
                     hint: 'Enter email address',
                     keyboardType: TextInputType.emailAddress,
+                    prefixIcon: Icons.mail_outline_rounded,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   _buildFieldLabel('Gender'),
                   const SizedBox(height: 8),
                   _buildGenderSelector(
                     selectedGender: subGender,
                     onSelect: (val) => setModalState(() => subGender = val),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   _buildFieldLabel('Age'),
                   const SizedBox(height: 6),
                   _buildInputBox(
                     controller: subAgeCtrl,
-                    hint: 'Enter age (e.g. 18)',
+                    hint: 'Enter age (e.g. 12)',
                     keyboardType: TextInputType.number,
+                    prefixIcon: Icons.cake_outlined,
                   ),
                   const SizedBox(height: 16),
                   _buildFieldLabel('Skill Level'),
@@ -277,7 +680,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Please enter sub profile first name'),
-                            backgroundColor: Colors.redAccent,
+                            backgroundColor: Color(0xFFE11D48),
                             behavior: SnackBarBehavior.floating,
                           ),
                         );
@@ -297,6 +700,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                         'gender': subGender,
                         'age': subAgeCtrl.text.trim(),
                         'level': _levels[subLevelIdx],
+                        'avatarPath': subAvatarPath,
                       };
 
                       setState(() {
@@ -309,9 +713,10 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                       if (mounted) {
                         ScaffoldMessenger.of(this.context).showSnackBar(
                           SnackBar(
-                            content: Text('Sub profile "$subName" added! Total: ${_subProfiles.length}'),
-                            backgroundColor: AppTheme.navyBlue,
+                            content: Text('Sub profile "$subName" added successfully!'),
+                            backgroundColor: const Color(0xFF0F172A),
                             behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
                         );
                       }
@@ -324,9 +729,9 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF0052FF).withValues(alpha: 0.25),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
+                            color: const Color(0xFF0052FF).withValues(alpha: 0.28),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
@@ -367,15 +772,26 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE2E8F0),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       'Sub Profiles (${_subProfiles.length})',
                       style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: AppTheme.navyBlue,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A),
                       ),
                     ),
                     TextButton.icon(
@@ -384,7 +800,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                         _openAddSubProfileModal();
                       },
                       icon: const Icon(Icons.add_rounded, size: 18),
-                      label: const Text('Add More'),
+                      label: const Text('Add Another', style: TextStyle(fontWeight: FontWeight.w700)),
                     ),
                   ],
                 ),
@@ -395,7 +811,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                     child: Center(
                       child: Text(
                         'No sub profiles added yet.',
-                        style: TextStyle(color: AppTheme.slateBlue),
+                        style: TextStyle(color: Color(0xFF64748B)),
                       ),
                     ),
                   ),
@@ -404,44 +820,67 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: _subProfiles.length,
-                      separatorBuilder: (_, _) => const Divider(height: 16),
+                      separatorBuilder: (_, _) => const Divider(height: 12, color: Color(0xFFF1F5F9)),
                       itemBuilder: (context, index) {
                         final p = _subProfiles[index];
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: CircleAvatar(
-                            backgroundColor: const Color(0xFFF3E8FF),
-                            child: Text(
-                              (p['name'] as String? ?? 'S').substring(0, 1).toUpperCase(),
-                              style: const TextStyle(
-                                color: Color(0xFF7C3AED),
-                                fontWeight: FontWeight.bold,
+                        final initial = (p['name'] as String? ?? 'S').substring(0, 1).toUpperCase();
+                        return Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 20,
+                                backgroundColor: const Color(0xFFEFF6FF),
+                                child: Text(
+                                  initial,
+                                  style: const TextStyle(
+                                    color: Color(0xFF0052FF),
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 15,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                          title: Text(
-                            p['name'] ?? 'Sub Athlete',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.navyBlue,
-                            ),
-                          ),
-                          subtitle: Text(
-                            'Level: ${p['level'] ?? 'Beginner'} • ${p['id'] ?? ''}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.slateBlue,
-                            ),
-                          ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
-                            onPressed: () async {
-                              setState(() {
-                                _subProfiles.removeAt(index);
-                              });
-                              setModalState(() {});
-                              await _saveSubProfiles();
-                            },
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      p['name'] ?? 'Sub Athlete',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                        color: Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Level: ${p['level'] ?? 'Beginner'} • Age: ${p['age'] ?? '-'}',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF64748B),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFE11D48), size: 20),
+                                onPressed: () async {
+                                  setState(() {
+                                    _subProfiles.removeAt(index);
+                                  });
+                                  setModalState(() {});
+                                  await _saveSubProfiles();
+                                },
+                              ),
+                            ],
                           ),
                         );
                       },
@@ -465,48 +904,74 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // ── 1. Top Bar: Back Arrow `<` + "Complete your profile" + "+ Sub Profile" ──
+              // ── Top Navigation Bar ─────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: Color(0xFF0F172A),
-                        size: 20,
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
                       ),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    const SizedBox(width: 4),
-                    const Expanded(
-                      child: Text(
-                        'Complete your profile',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
                           color: Color(0xFF0F172A),
-                          letterSpacing: -0.4,
+                          size: 18,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        onPressed: () => Navigator.pop(context),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Complete Profile',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF0F172A),
+                              letterSpacing: -0.4,
+                            ),
+                          ),
+                          Text(
+                            'Personalize your cricket experience',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: Color(0xFF64748B),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     // "+ Sub Profile" Clean Pill Button
                     GestureDetector(
                       onTap: _openAddSubProfileModal,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFCBD5E1), width: 1.0),
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFBFDBFE), width: 1.0),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF0F172A).withValues(alpha: 0.05),
-                              blurRadius: 3,
-                              offset: const Offset(0, 1),
+                              color: const Color(0xFF0052FF).withValues(alpha: 0.08),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
                             ),
                           ],
                         ),
@@ -515,16 +980,16 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                           children: [
                             Icon(
                               Icons.add_rounded,
-                              color: Color(0xFF0F172A),
-                              size: 15,
+                              color: Color(0xFF0052FF),
+                              size: 16,
                             ),
                             SizedBox(width: 4),
                             Text(
                               'Sub Profile',
                               style: TextStyle(
                                 fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF0F172A),
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0052FF),
                                 letterSpacing: 0.1,
                               ),
                             ),
@@ -536,19 +1001,88 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 ),
               ),
 
-              // ── 2. Scrollable Body ──────────────────────────────────────────
+              // ── Scrollable Body ──────────────────────────────────────────
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Subtitle: "What would you like your friends to call you?"
+                      // ── Profile Photo Section (Modern Avatar Picker) ─────
+                      Center(
+                        child: Stack(
+                          children: [
+                            GestureDetector(
+                              onTap: _pickAvatar,
+                              child: Container(
+                                width: 96,
+                                height: 96,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white,
+                                  border: Border.all(color: const Color(0xFFE2E8F0), width: 3),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF0052FF).withValues(alpha: 0.12),
+                                      blurRadius: 16,
+                                      offset: const Offset(0, 6),
+                                    ),
+                                  ],
+                                ),
+                                child: ClipOval(
+                                  child: _avatarPath != null
+                                      ? Image.file(
+                                          File(_avatarPath!),
+                                          fit: BoxFit.cover,
+                                        )
+                                      : Container(
+                                          color: const Color(0xFFF1F5F9),
+                                          child: const Icon(
+                                            Icons.person_rounded,
+                                            size: 52,
+                                            color: Color(0xFF94A3B8),
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: GestureDetector(
+                                onTap: _pickAvatar,
+                                child: Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    gradient: AppTheme.primaryCtaGradient,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white, width: 2.5),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF0052FF).withValues(alpha: 0.3),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt_rounded,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       const Text(
-                        'What would you like your friends to call you?',
+                        'Upload Profile Photo',
                         style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
                           color: Color(0xFF64748B),
                         ),
                       ),
@@ -559,22 +1093,21 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                         GestureDetector(
                           onTap: _showSubProfilesListModal,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: const Color(0xFFCBD5E1),
-                                width: 0.9,
-                              ),
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: const Color(0xFFCBD5E1)),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
+                                const Icon(Icons.group_outlined, size: 15, color: Color(0xFF0052FF)),
+                                const SizedBox(width: 6),
                                 Text(
-                                  'Total sub profiles: ${_subProfiles.length}',
+                                  'Linked Sub Profiles: ${_subProfiles.length}',
                                   style: const TextStyle(
-                                    fontSize: 11.5,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w700,
                                     color: Color(0xFF0F172A),
                                   ),
@@ -583,7 +1116,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                                 const Icon(
                                   Icons.keyboard_arrow_down_rounded,
                                   color: Color(0xFF64748B),
-                                  size: 15,
+                                  size: 16,
                                 ),
                               ],
                             ),
@@ -591,162 +1124,176 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                         ),
                       ],
 
+                      const SizedBox(height: 20),
+
+                      // ── Card 1: Personal Details ─────────────────────────
+                      _buildSectionCard(
+                        title: 'Personal Details',
+                        icon: Icons.person_outline_rounded,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildFieldLabel('First Name'),
+                                    const SizedBox(height: 6),
+                                    _buildInputBox(
+                                      controller: _firstNameController,
+                                      focusNode: _firstNameFocus,
+                                      hint: 'e.g. Karthik',
+                                      prefixIcon: Icons.badge_outlined,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildFieldLabel('Last Name'),
+                                    const SizedBox(height: 6),
+                                    _buildInputBox(
+                                      controller: _lastNameController,
+                                      focusNode: _lastNameFocus,
+                                      hint: 'e.g. Raja',
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          _buildFieldLabel('Email Address'),
+                          const SizedBox(height: 6),
+                          _buildInputBox(
+                            controller: _emailController,
+                            focusNode: _emailFocus,
+                            hint: 'name@example.com',
+                            keyboardType: TextInputType.emailAddress,
+                            prefixIcon: Icons.mail_outline_rounded,
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildFieldLabel('Gender'),
+                                    const SizedBox(height: 6),
+                                    _buildGenderSelector(
+                                      selectedGender: _selectedGender,
+                                      onSelect: (val) {
+                                        setState(() => _selectedGender = val);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 2,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildFieldLabel('Age'),
+                                    const SizedBox(height: 6),
+                                    _buildInputBox(
+                                      controller: _ageController,
+                                      focusNode: _ageFocus,
+                                      hint: 'Age',
+                                      keyboardType: TextInputType.number,
+                                      prefixIcon: Icons.cake_outlined,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // ── Card 2: Cricket Skill & Bio ──────────────────────
+                      _buildSectionCard(
+                        title: 'Cricket Skill Level',
+                        icon: Icons.sports_cricket_rounded,
+                        children: [
+                          _buildFieldLabel('Select Your Current Level'),
+                          const SizedBox(height: 12),
+                          _buildLevelStepperWidget(
+                            selectedIndex: _selectedLevelIndex,
+                            onSelect: (index) {
+                              setState(() => _selectedLevelIndex = index);
+                            },
+                          ),
+                          const SizedBox(height: 18),
+                          _buildFieldLabel('About You (Bio)'),
+                          const SizedBox(height: 6),
+                          _buildMultilineInputBox(
+                            controller: _bioController,
+                            focusNode: _bioFocus,
+                            hint: 'Tell us about your batting style, favorite shots, or cricket goals...',
+                          ),
+                        ],
+                      ),
+
                       const SizedBox(height: 24),
 
-                      // ── Form Fields Card ──────────────────────────────────
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFFE2E8F0),
-                            width: 1.0,
+                      // ── Save & Continue Button ───────────────────────────
+                      GestureDetector(
+                        onTap: _isLoading ? null : _onContinue,
+                        child: Container(
+                          width: double.infinity,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(14),
+                            gradient: AppTheme.primaryCtaGradient,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF0052FF).withValues(alpha: 0.3),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-                              blurRadius: 14,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // 1. First Name
-                            _buildFieldLabel('First Name'),
-                            const SizedBox(height: 6),
-                            _buildInputBox(
-                              controller: _firstNameController,
-                              focusNode: _firstNameFocus,
-                              hint: 'Enter your first name',
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // 2. Last Name
-                            _buildFieldLabel('Last Name'),
-                            const SizedBox(height: 6),
-                            _buildInputBox(
-                              controller: _lastNameController,
-                              focusNode: _lastNameFocus,
-                              hint: 'Enter your last name',
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // 3. Email
-                            _buildFieldLabel('Email'),
-                            const SizedBox(height: 6),
-                            _buildInputBox(
-                              controller: _emailController,
-                              focusNode: _emailFocus,
-                              hint: 'Enter your email address',
-                              keyboardType: TextInputType.emailAddress,
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // 4. Gender Selection
-                            _buildFieldLabel('Gender'),
-                            const SizedBox(height: 8),
-                            _buildGenderSelector(
-                              selectedGender: _selectedGender,
-                              onSelect: (val) {
-                                setState(() {
-                                  _selectedGender = val;
-                                });
-                              },
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // 5. Age
-                            _buildFieldLabel('Age'),
-                            const SizedBox(height: 6),
-                            _buildInputBox(
-                              controller: _ageController,
-                              focusNode: _ageFocus,
-                              hint: 'Enter your age (e.g. 21)',
-                              keyboardType: TextInputType.number,
-                            ),
-
-                            const SizedBox(height: 20),
-
-                            // 6. Your Level Stepper (Beginner, Trainer, Pro, Expert, Master)
-                            _buildFieldLabel('Your level'),
-                            const SizedBox(height: 14),
-                            _buildLevelStepperWidget(
-                              selectedIndex: _selectedLevelIndex,
-                              onSelect: (index) {
-                                setState(() {
-                                  _selectedLevelIndex = index;
-                                });
-                              },
-                            ),
-
-                            const SizedBox(height: 20),
-
-                            // 7. Bio (Multiline)
-                            _buildFieldLabel('Bio'),
-                            const SizedBox(height: 6),
-                            _buildMultilineInputBox(
-                              controller: _bioController,
-                              focusNode: _bioFocus,
-                              hint: 'Tell us a bit about your cricket journey or goals',
-                            ),
-                          ],
+                          child: _isLoading
+                              ? const Center(
+                                  child: SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  ),
+                                )
+                              : const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Save & Continue',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+                                  ],
+                                ),
                         ),
                       ),
 
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 24),
                     ],
-                  ),
-                ),
-              ),
-
-              // ── 3. Bottom Sticky "Continue" Button ────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-                child: GestureDetector(
-                  onTap: _isLoading ? null : _onContinue,
-                  child: Container(
-                    width: double.infinity,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      gradient: AppTheme.primaryCtaGradient,
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0052FF).withValues(alpha: 0.25),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: _isLoading
-                        ? const Center(
-                            child: SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            ),
-                          )
-                        : const Center(
-                            child: Text(
-                              'Continue',
-                              style: TextStyle(
-                                fontSize: 15.5,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ),
                   ),
                 ),
               ),
@@ -758,13 +1305,69 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   }
 
   // ── Helper Widgets ──────────────────────────────────────────────────────────
+
+  Widget _buildSectionCard({
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFE2E8F0),
+          width: 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 16, color: const Color(0xFF0052FF)),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...children,
+        ],
+      ),
+    );
+  }
+
   Widget _buildFieldLabel(String label) {
     return Text(
       label,
       style: const TextStyle(
-        fontSize: 12.5,
+        fontSize: 12,
         fontWeight: FontWeight.w700,
-        color: Color(0xFF0F172A),
+        color: Color(0xFF475569),
         letterSpacing: 0.1,
       ),
     );
@@ -788,16 +1391,16 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
         return Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 2.5),
             child: GestureDetector(
               onTap: () => onSelect(label),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
-                height: 44,
+                height: 46,
                 decoration: BoxDecoration(
                   gradient: isSelected ? AppTheme.primaryCtaGradient : null,
-                  color: isSelected ? null : Colors.white,
-                  borderRadius: BorderRadius.circular(8),
+                  color: isSelected ? null : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(10),
                   border: isSelected
                       ? null
                       : Border.all(
@@ -807,9 +1410,9 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                   boxShadow: [
                     BoxShadow(
                       color: isSelected
-                          ? const Color(0xFF0052FF).withValues(alpha: 0.28)
-                          : const Color(0xFF0F172A).withValues(alpha: 0.04),
-                      blurRadius: isSelected ? 6 : 3,
+                          ? const Color(0xFF0052FF).withValues(alpha: 0.25)
+                          : const Color(0xFF0F172A).withValues(alpha: 0.02),
+                      blurRadius: isSelected ? 6 : 2,
                       offset: const Offset(0, 1),
                     ),
                   ],
@@ -819,14 +1422,14 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                   children: [
                     Icon(
                       icon,
-                      size: 16,
+                      size: 15,
                       color: isSelected ? Colors.white : const Color(0xFF64748B),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
                     Text(
                       label,
                       style: TextStyle(
-                        fontSize: 12.5,
+                        fontSize: 11.5,
                         fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                         color: isSelected ? Colors.white : const Color(0xFF0F172A),
                       ),
@@ -846,46 +1449,50 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     FocusNode? focusNode,
     required String hint,
     TextInputType? keyboardType,
+    IconData? prefixIcon,
   }) {
     return Container(
-      height: 48,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      height: 46,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: const Color(0xFFCBD5E1),
           width: 1.0,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-            blurRadius: 3,
-            offset: const Offset(0, 1),
+      ),
+      child: Row(
+        children: [
+          if (prefixIcon != null) ...[
+            Icon(prefixIcon, size: 16, color: const Color(0xFF94A3B8)),
+            const SizedBox(width: 8),
+          ],
+          Expanded(
+            child: TextField(
+              controller: controller,
+              focusNode: focusNode,
+              keyboardType: keyboardType,
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF0F172A),
+              ),
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: const TextStyle(
+                  color: Color(0xFF94A3B8),
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.normal,
+                ),
+                isDense: true,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+              ),
+            ),
           ),
         ],
-      ),
-      child: TextField(
-        controller: controller,
-        focusNode: focusNode,
-        keyboardType: keyboardType,
-        style: const TextStyle(
-          fontSize: 14.5,
-          fontWeight: FontWeight.w700,
-          color: Color(0xFF0F172A),
-        ),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: const TextStyle(
-            color: Color(0xFF94A3B8),
-            fontSize: 13.5,
-            fontWeight: FontWeight.normal,
-          ),
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
-        ),
       ),
     );
   }
@@ -896,29 +1503,22 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     required String hint,
   }) {
     return Container(
-      height: 90,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      height: 84,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: const Color(0xFFCBD5E1),
           width: 1.0,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-            blurRadius: 3,
-            offset: const Offset(0, 1),
-          ),
-        ],
       ),
       child: TextField(
         controller: controller,
         focusNode: focusNode,
         maxLines: 3,
         style: const TextStyle(
-          fontSize: 14,
+          fontSize: 13,
           fontWeight: FontWeight.w600,
           color: Color(0xFF0F172A),
         ),
@@ -926,7 +1526,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
           hintText: hint,
           hintStyle: const TextStyle(
             color: Color(0xFF94A3B8),
-            fontSize: 13,
+            fontSize: 12.5,
             fontWeight: FontWeight.normal,
           ),
           border: InputBorder.none,
@@ -949,7 +1549,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
             // Connecting line
             Container(
               height: 2.5,
-              margin: const EdgeInsets.symmetric(horizontal: 16),
+              margin: const EdgeInsets.symmetric(horizontal: 24),
               color: const Color(0xFFE2E8F0),
             ),
             Row(
@@ -959,25 +1559,25 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 return GestureDetector(
                   onTap: () => onSelect(index),
                   child: Container(
-                    width: 24,
-                    height: 24,
+                    width: 26,
+                    height: 26,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: isSelected ? AppTheme.primaryCtaGradient : null,
-                      color: isSelected ? null : const Color(0xFFE2E8F0),
+                      color: isSelected ? null : Colors.white,
                       border: Border.all(
-                        color: Colors.white,
+                        color: isSelected ? Colors.white : const Color(0xFFCBD5E1),
                         width: 2,
                       ),
-                      boxShadow: isSelected
-                          ? [
-                              BoxShadow(
-                                color: const Color(0xFF0052FF).withValues(alpha: 0.35),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ]
-                          : [],
+                      boxShadow: [
+                        BoxShadow(
+                          color: isSelected
+                              ? const Color(0xFF0052FF).withValues(alpha: 0.35)
+                              : const Color(0xFF0F172A).withValues(alpha: 0.05),
+                          blurRadius: isSelected ? 6 : 2,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
                     ),
                     child: isSelected
                         ? Center(
@@ -1010,8 +1610,8 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 11,
-                    fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
-                    color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                    color: isSelected ? const Color(0xFF0052FF) : const Color(0xFF64748B),
                   ),
                 ),
               ),
