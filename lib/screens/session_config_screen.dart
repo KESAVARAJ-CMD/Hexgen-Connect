@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/services/sessions_service.dart';
 import '../core/theme/app_theme.dart';
 import '../core/widgets/cyber_controls.dart';
@@ -201,6 +203,15 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
         'summary': '6 Balls • ${config.ballSpeed.toStringAsFixed(1)} km/h • ${config.selectedVariation}',
         'speed': '${config.ballSpeed.toStringAsFixed(1)} km/h',
         'type': '${config.selectedBowlerType} - ${config.selectedVariation} (${config.selectedDirection})',
+        'armType': config.selectedArm,
+        'bowlerType': config.selectedBowlerType,
+        'length': config.selectedLength,
+        'variation': config.selectedVariation,
+        'direction': config.selectedDirection,
+        'level': config.selectedLevel,
+        'randomSpin': config.randomSpin,
+        'randomLength': config.randomLength,
+        'randomSpeed': config.randomSpeed,
       });
     }
 
@@ -1207,7 +1218,7 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
 }
 
 /// ── Session QR Code View & Share Dialog ─────────────────────────────────────
-class SessionQrShareDialog extends StatelessWidget {
+class SessionQrShareDialog extends StatefulWidget {
   final SessionItem? sessionItem;
   final String? sessionTitle;
   final double? speed;
@@ -1216,6 +1227,8 @@ class SessionQrShareDialog extends StatelessWidget {
   final String length;
   final String variation;
   final String? machineId;
+  final String? playerName;
+  final String? playerMobile;
   final VoidCallback onDone;
 
   const SessionQrShareDialog({
@@ -1228,38 +1241,176 @@ class SessionQrShareDialog extends StatelessWidget {
     this.length = 'Good',
     this.variation = 'Swing',
     this.machineId,
+    this.playerName,
+    this.playerMobile,
     required this.onDone,
   });
 
-  String get _title => sessionItem?.name ?? sessionTitle ?? 'Cricket Session';
-  String get _speedStr => sessionItem?.speed ?? '${speed?.toStringAsFixed(1) ?? '140.0'} km/h';
-  String get _arm => sessionItem?.armType ?? armType ?? 'Right Arm';
-  String get _bowler => sessionItem?.bowlerType ?? bowlerType;
-  String get _len => sessionItem?.length ?? length;
-  String get _var => sessionItem?.variation ?? variation;
-  String get _dir => sessionItem?.direction ?? 'In';
-  String get _lvl => sessionItem?.level ?? 'Medium';
-  String get _oversCount => sessionItem?.oversCount ?? '6 Overs';
-  String get _lane => sessionItem?.lane ?? 'Hexgen Turf';
-  String get _date => sessionItem?.date ?? '14 November 2026';
-  String get _time => sessionItem?.time ?? 'Practice Session';
-  String get _code => machineId ?? 'HEX-${(_title.hashCode.abs() % 9000 + 1000)}';
+  @override
+  State<SessionQrShareDialog> createState() => _SessionQrShareDialogState();
+}
 
-  String get qrDataText => '''
-🏏 HEXGEN CONNECT • PRACTICE SESSION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📌 Session: $_title
-⚡ Speed: $_speedStr
-👤 Bowler: $_bowler ($_arm)
-📏 Pitch Length: $_len Length
-🌀 Delivery: $_var ($_dir - $_lvl)
-🔢 Total Overs: $_oversCount
-🆔 Machine ID: $_code
-📅 Date: $_date • $_time
-📍 Turf: $_lane
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Status: Configured & Ready to Bowl
-'''.trim();
+class _SessionQrShareDialogState extends State<SessionQrShareDialog> {
+  String _resolvedPlayerName = 'Player';
+  String _resolvedPlayerMobile = '9876543210';
+
+  @override
+  void initState() {
+    super.initState();
+    _resolvePlayerProfile();
+  }
+
+  Future<void> _resolvePlayerProfile() async {
+    if (widget.playerName != null && widget.playerName!.isNotEmpty) {
+      _resolvedPlayerName = widget.playerName!;
+    }
+    if (widget.playerMobile != null && widget.playerMobile!.isNotEmpty) {
+      _resolvedPlayerMobile = widget.playerMobile!;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final pName = prefs.getString('player_name');
+      final pPhone = prefs.getString('player_phone');
+      if (mounted) {
+        setState(() {
+          if (widget.playerName == null && pName != null && pName.isNotEmpty) {
+            _resolvedPlayerName = pName;
+          }
+          if (widget.playerMobile == null && pPhone != null && pPhone.isNotEmpty) {
+            _resolvedPlayerMobile = pPhone;
+          }
+        });
+      }
+    } catch (_) {}
+  }
+
+  String get _title => widget.sessionItem?.name ?? widget.sessionTitle ?? 'Cricket Session';
+  String get _speedStr => widget.sessionItem?.speed ?? '${widget.speed?.toStringAsFixed(1) ?? '140.0'} km/h';
+  String get _arm => widget.sessionItem?.armType ?? widget.armType ?? 'Right Arm';
+  String get _bowler => widget.sessionItem?.bowlerType ?? widget.bowlerType;
+  String get _len => widget.sessionItem?.length ?? widget.length;
+  String get _var => widget.sessionItem?.variation ?? widget.variation;
+  String get _code => widget.machineId ?? 'HEX-${(_title.hashCode.abs() % 9000 + 1000)}';
+
+  // ── ONE6 STANDARD ENUM NORMALIZERS (Exact Match to Machine Java Backend) ───
+  static String _normalizeArm(String? arm) {
+    if (arm == null) return "RIGHT";
+    return arm.toUpperCase().contains("LEFT") ? "LEFT" : "RIGHT";
+  }
+
+  static String _normalizeBowler(String? bType) {
+    if (bType == null) return "PACE";
+    final upper = bType.toUpperCase();
+    if (upper.contains("OFF")) return "OFFSPIN";
+    if (upper.contains("LEG")) return "LEGSPIN";
+    if (upper.contains("WRIST")) return "WRIST";
+    return "PACE";
+  }
+
+  static String _normalizeLength(String? len) {
+    if (len == null) return "GOOD";
+    final upper = len.toUpperCase();
+    if (upper.contains("SLOT")) return "SLOT";
+    if (upper.contains("FULL")) return "FULL";
+    if (upper.contains("SHORT")) return "SHORT";
+    return "GOOD";
+  }
+
+  static String? _normalizeVariation(String? bowlerType, String? variation) {
+    if (_normalizeBowler(bowlerType) != "PACE") return null;
+    if (variation == null) return "SWING";
+    return variation.toUpperCase().contains("SEAM") ? "SEAM" : "SWING";
+  }
+
+  static String _normalizeDirection(String? dir) {
+    if (dir == null) return "OUT";
+    return dir.toUpperCase().contains("IN") ? "IN" : "OUT";
+  }
+
+  static String _normalizeSpinLevel(String? lvl) {
+    if (lvl == null) return "BASIC";
+    final upper = lvl.toUpperCase();
+    if (upper.contains("ADV")) return "ADVANCE";
+    if (upper.contains("MED")) return "MEDIUM";
+    return "BASIC";
+  }
+
+  /// ── ONE6_SESSION JSON PAYLOAD (Machine Scannable Format) ───────────────────
+  String get qrDataText {
+    final item = widget.sessionItem;
+    final List<Map<String, dynamic>> oversPayload = [];
+
+    if (item != null && item.overs.isNotEmpty) {
+      for (int i = 0; i < item.overs.length; i++) {
+        final over = item.overs[i];
+        final speedInt = int.tryParse(over['speed']?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '') ??
+            int.tryParse(item.speed.replaceAll(RegExp(r'[^0-9]'), '')) ??
+            (widget.speed?.toInt() ?? 90);
+
+        final bowler = over['bowlerType'] ?? over['session_bowler_type'] ?? item.bowlerType;
+        final arm = over['armType'] ?? over['session_arm_type'] ?? item.armType;
+        final len = over['length'] ?? over['session_length'] ?? item.length;
+        final variation = over['variation'] ?? over['session_variation'] ?? item.variation;
+        final direction = over['direction'] ?? item.direction;
+        final spinLevel = over['level'] ?? over['spin_level'] ?? item.level;
+
+        oversPayload.add({
+          "overNumber": i + 1,
+          "armType": _normalizeArm(arm),
+          "bowlerType": _normalizeBowler(bowler),
+          "speed": speedInt,
+          "length": _normalizeLength(len),
+          "lineNo": int.tryParse(over['session_line']?.toString() ?? '3') ?? 3,
+          "variation": _normalizeVariation(bowler, variation),
+          "direction": _normalizeDirection(direction),
+          "spinLevel": _normalizeSpinLevel(spinLevel),
+          "drift": over['drift'] as bool? ?? false,
+          "randomLineLength": over['randomLength'] as bool? ?? false,
+          "randomSpeed": over['randomSpeed'] as bool? ?? false,
+          "randomSpinSwing": over['randomSpin'] as bool? ?? false,
+        });
+      }
+    } else {
+      final speedInt = int.tryParse(widget.speed != null ? widget.speed!.toStringAsFixed(0) : (_speedStr.replaceAll(RegExp(r'[^0-9]'), ''))) ?? 90;
+      final totalOvers = int.tryParse(widget.sessionItem?.oversCount.replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 1;
+
+      for (int i = 1; i <= totalOvers; i++) {
+        oversPayload.add({
+          "overNumber": i,
+          "armType": _normalizeArm(_arm),
+          "bowlerType": _normalizeBowler(_bowler),
+          "speed": speedInt,
+          "length": _normalizeLength(_len),
+          "lineNo": 3,
+          "variation": _normalizeVariation(_bowler, _var),
+          "direction": _normalizeDirection(widget.sessionItem?.direction ?? 'Out'),
+          "spinLevel": _normalizeSpinLevel(widget.sessionItem?.level ?? 'Medium'),
+          "drift": false,
+          "randomLineLength": false,
+          "randomSpeed": false,
+          "randomSpinSwing": false,
+        });
+      }
+    }
+
+    final Map<String, dynamic> payload = {
+      "type": "ONE6_SESSION",
+      "player": {
+        "name": _resolvedPlayerName.trim().isNotEmpty ? _resolvedPlayerName : "Player",
+        "mobile": _resolvedPlayerMobile.trim().isNotEmpty ? _resolvedPlayerMobile : "9876543210",
+      },
+      "session": {
+        "name": _title.trim().isNotEmpty ? _title : "Practice Session",
+        "numOvers": oversPayload.length,
+        "intervalBetweenBalls": 15,
+        "intervalBetweenOvers": 30,
+      },
+      "overs": oversPayload,
+    };
+
+    return jsonEncode(payload);
+  }
 
   void _copyShareDetails(BuildContext context) {
     Clipboard.setData(ClipboardData(text: qrDataText));
@@ -1271,7 +1422,7 @@ Status: Configured & Ready to Bowl
             SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Session details copied to clipboard!',
+                'One6 Session QR data copied to clipboard!',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -1338,7 +1489,7 @@ Status: Configured & Ready to Bowl
                     ),
                   ),
                   GestureDetector(
-                    onTap: onDone,
+                    onTap: widget.onDone,
                     behavior: HitTestBehavior.opaque,
                     child: Container(
                       width: 32,
@@ -1375,7 +1526,7 @@ Status: Configured & Ready to Bowl
               ),
               const SizedBox(height: 4),
               const Text(
-                'Scan this QR code from any other phone camera or Google Lens to view full session details',
+                'Scan this QR code from the One6 bowling machine operator app to launch this practice session',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 11.5,
@@ -1504,7 +1655,7 @@ Status: Configured & Ready to Bowl
                   // Done Button
                   Expanded(
                     child: GestureDetector(
-                      onTap: onDone,
+                      onTap: widget.onDone,
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
