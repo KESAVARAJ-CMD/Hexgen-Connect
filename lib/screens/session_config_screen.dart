@@ -56,6 +56,7 @@ class SessionConfigScreen extends StatefulWidget {
   final String? initialSessionTitle;
   final int initialOversCount;
   final SessionItem? sessionToEdit;
+  final SessionItem? templateSession;
 
   const SessionConfigScreen({
     super.key,
@@ -63,6 +64,7 @@ class SessionConfigScreen extends StatefulWidget {
     this.initialSessionTitle,
     this.initialOversCount = 6,
     this.sessionToEdit,
+    this.templateSession,
   });
 
   @override
@@ -94,9 +96,9 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.sessionToEdit != null) {
-      final s = widget.sessionToEdit!;
-      _sessionNameController.text = s.name;
+    final s = widget.sessionToEdit ?? widget.templateSession;
+    if (s != null) {
+      _sessionNameController.text = s.name.isNotEmpty ? s.name : 'Practice';
 
       final speedVal = double.tryParse(s.speed.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 50.0;
 
@@ -1056,6 +1058,7 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
 class SessionQrShareDialog extends StatefulWidget {
   final SessionItem? sessionItem;
   final String? sessionTitle;
+  final String? sessionToken;
   final double? speed;
   final String? armType;
   final String bowlerType;
@@ -1070,6 +1073,7 @@ class SessionQrShareDialog extends StatefulWidget {
     super.key,
     this.sessionItem,
     this.sessionTitle,
+    this.sessionToken,
     this.speed,
     this.armType,
     this.bowlerType = 'Pace',
@@ -1127,6 +1131,7 @@ class _SessionQrShareDialogState extends State<SessionQrShareDialog> {
   String get _len => widget.sessionItem?.length ?? widget.length;
   String get _var => widget.sessionItem?.variation ?? widget.variation;
   String get _code => widget.machineId ?? 'HEX-${(_title.hashCode.abs() % 9000 + 1000)}';
+  String get _token => widget.sessionItem?.sessionToken ?? widget.sessionToken ?? 'HEX-SES-${DateTime.now().millisecondsSinceEpoch.toRadixString(16).toUpperCase()}-${(_title.hashCode.abs() % 9000 + 1000)}';
 
   // ── ONE6 STANDARD ENUM NORMALIZERS (Exact Match to Machine Java Backend) ───
   static String _normalizeArm(String? arm) {
@@ -1231,6 +1236,8 @@ class _SessionQrShareDialogState extends State<SessionQrShareDialog> {
 
     final Map<String, dynamic> payload = {
       "type": "ONE6_SESSION",
+      "version": "1.0",
+      "sessionToken": _token,
       "player": {
         "name": _resolvedPlayerName.trim().isNotEmpty ? _resolvedPlayerName : "Player",
         "mobile": _resolvedPlayerMobile.trim().isNotEmpty ? _resolvedPlayerMobile : "9876543210",
@@ -1425,6 +1432,24 @@ class _SessionQrShareDialogState extends State<SessionQrShareDialog> {
                           fontSize: 10.5,
                           fontWeight: FontWeight.w800,
                           color: Color(0xFF0052FF),
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
+                      ),
+                      child: Text(
+                        'TOKEN: $_token',
+                        style: const TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF475569),
                           letterSpacing: 0.4,
                         ),
                       ),

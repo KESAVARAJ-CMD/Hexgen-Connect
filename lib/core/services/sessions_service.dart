@@ -21,6 +21,7 @@ class SessionItem {
   final String level;
   final bool isUpcoming;
   final List<Map<String, dynamic>> overs;
+  final String sessionToken;
 
   SessionItem({
     required this.id,
@@ -40,10 +41,13 @@ class SessionItem {
     this.level = 'Basic',
     this.isUpcoming = false,
     required this.overs,
-  });
+    String? sessionToken,
+  }) : sessionToken = sessionToken ??
+            'HEX-SES-${DateTime.now().millisecondsSinceEpoch.toRadixString(16).toUpperCase()}-${(id.hashCode.abs() % 9000 + 1000)}';
 
   Map<String, dynamic> toJson() => {
     'id': id,
+    'sessionToken': sessionToken,
     'title': title,
     'name': name,
     'date': date,
@@ -64,6 +68,7 @@ class SessionItem {
 
   factory SessionItem.fromJson(Map<String, dynamic> json) => SessionItem(
     id: json['id'] as String? ?? 'SES-01',
+    sessionToken: json['sessionToken'] as String?,
     title: json['title'] as String? ?? 'Session',
     name: json['name'] as String? ?? 'Practice Session',
     date: json['date'] as String? ?? '',
@@ -87,6 +92,7 @@ class SessionItem {
 
   SessionItem copyWith({
     String? id,
+    String? sessionToken,
     String? title,
     String? name,
     String? date,
@@ -106,6 +112,7 @@ class SessionItem {
   }) {
     return SessionItem(
       id: id ?? this.id,
+      sessionToken: sessionToken ?? this.sessionToken,
       title: title ?? this.title,
       name: name ?? this.name,
       date: date ?? this.date,

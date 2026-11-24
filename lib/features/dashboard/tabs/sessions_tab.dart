@@ -273,6 +273,33 @@ class _SessionsTabState extends State<SessionsTab> {
     }
   }
 
+  Future<void> _replaySession(SessionItem item) async {
+    final nextNum = _sessionsService.sessions.length + 1;
+    final created = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SessionConfigScreen(
+          isCreatingPracticeSession: true,
+          initialSessionTitle: 'session $nextNum',
+          templateSession: item,
+        ),
+      ),
+    );
+
+    if (created == true && mounted) {
+      setState(() {
+        _selectedTab = 'upcoming'; // Switch to Upcoming so player immediately sees fresh session & new QR
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Session booked! Fresh QR code ready in Upcoming Sessions.'),
+          backgroundColor: AppTheme.navyBlue,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1258,25 +1285,25 @@ class _SessionsTabState extends State<SessionsTab> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 GestureDetector(
-                                  onTap: () => _showSessionQrCode(item),
+                                  onTap: () => _replaySession(item),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFF8FAFC),
+                                      color: const Color(0xFFEFF6FF),
                                       borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                                      border: Border.all(color: const Color(0xFFBFDBFE)),
                                     ),
                                     child: const Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.qr_code_2_rounded, size: 13, color: Color(0xFF334155)),
+                                        Icon(Icons.replay_rounded, size: 13, color: Color(0xFF0052FF)),
                                         SizedBox(width: 4),
                                         Text(
-                                          'QR Code',
+                                          'Book Again',
                                           style: TextStyle(
                                             fontSize: 11,
-                                            fontWeight: FontWeight.w600,
-                                            color: Color(0xFF334155),
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFF0052FF),
                                           ),
                                         ),
                                       ],
@@ -1528,49 +1555,92 @@ class _SessionsTabState extends State<SessionsTab> {
 
                         const SizedBox(height: 8),
 
-                        // ── Ask Coach About This Session (Clean White Banner) ──
-                        GestureDetector(
-                          onTap: () {
-                            AskCoachScreen.open(
-                              context,
-                              preAttachedSession: '${item.title} - ${item.name}',
-                            );
-                          },
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: const Color(0xFFCBD5E1),
-                                width: 1.1,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.chat_bubble_outline_rounded, size: 15, color: Color(0xFF0F172A)),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Ask Coach About This Session',
-                                  style: TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF0F172A),
-                                    letterSpacing: 0.2,
+                        // ── Bottom Actions: Book Again (Replay) & Ask Coach ──
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 6,
+                              child: GestureDetector(
+                                onTap: () => _replaySession(item),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  decoration: BoxDecoration(
+                                    gradient: AppTheme.primaryCtaGradient,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF0052FF).withValues(alpha: 0.25),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.replay_rounded, size: 15, color: Colors.white),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'Book Again',
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white,
+                                          letterSpacing: 0.2,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 5,
+                              child: GestureDetector(
+                                onTap: () {
+                                  AskCoachScreen.open(
+                                    context,
+                                    preAttachedSession: '${item.title} - ${item.name}',
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: const Color(0xFFCBD5E1),
+                                      width: 1.1,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.chat_bubble_outline_rounded, size: 15, color: Color(0xFF0F172A)),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'Ask Coach',
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFF0F172A),
+                                          letterSpacing: 0.2,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
