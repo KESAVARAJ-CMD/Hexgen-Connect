@@ -169,12 +169,7 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
       _totalOvers = (widget.initialOversCount >= 1 && widget.initialOversCount <= 10)
           ? widget.initialOversCount
           : 6;
-      final nextIdx = SessionsService().sessions.length + 1;
-      if (widget.initialSessionTitle != null && widget.initialSessionTitle!.isNotEmpty) {
-        _sessionNameController.text = widget.initialSessionTitle!;
-      } else {
-        _sessionNameController.text = 'session $nextIdx';
-      }
+      _sessionNameController.text = 'Practice';
     }
   }
 
