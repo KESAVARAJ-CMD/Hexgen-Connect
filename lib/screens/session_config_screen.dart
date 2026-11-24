@@ -198,6 +198,9 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
   String get _selectedVariation => _currentConfig.selectedVariation;
   set _selectedVariation(String val) => _currentConfig.selectedVariation = val;
 
+  String get _selectedDirection => _currentConfig.selectedDirection;
+  set _selectedDirection(String val) => _currentConfig.selectedDirection = val;
+
   String get _selectedLevel => _currentConfig.selectedLevel;
   set _selectedLevel(String val) => _currentConfig.selectedLevel = val;
 
@@ -695,7 +698,7 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
 
                       // ── 2. VARIATION (Only Pace has Swing & Seam!) ──────────
                       _buildSectionHeader(isPace ? 'PACE VARIATION' : 'SPIN VARIATION'),
-                      if (isPace)
+                      if (isPace) ...[
                         Row(
                           children: [
                             _buildSelectableButton(
@@ -707,17 +710,62 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                             _buildSelectableButton(
                               label: 'Swing',
                               isSelected: _selectedVariation == 'Swing',
-                              onTap: () => setState(() => _selectedVariation = 'Swing'),
+                              onTap: () => setState(() {
+                                _selectedVariation = 'Swing';
+                                if (_selectedDirection != 'In' && _selectedDirection != 'Out') {
+                                  _selectedDirection = 'In';
+                                }
+                              }),
                             ),
                             const SizedBox(width: 8),
                             _buildSelectableButton(
                               label: 'Seam',
                               isSelected: _selectedVariation == 'Seam',
-                              onTap: () => setState(() => _selectedVariation = 'Seam'),
+                              onTap: () => setState(() {
+                                _selectedVariation = 'Seam';
+                                if (_selectedDirection != 'In' && _selectedDirection != 'Out') {
+                                  _selectedDirection = 'In';
+                                }
+                              }),
                             ),
                           ],
-                        )
-                      else
+                        ),
+                        if (_selectedVariation == 'Swing') ...[
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              _buildSelectableButton(
+                                label: 'In Swing',
+                                isSelected: _selectedDirection == 'In',
+                                onTap: () => setState(() => _selectedDirection = 'In'),
+                              ),
+                              const SizedBox(width: 8),
+                              _buildSelectableButton(
+                                label: 'Out Swing',
+                                isSelected: _selectedDirection == 'Out',
+                                onTap: () => setState(() => _selectedDirection = 'Out'),
+                              ),
+                            ],
+                          ),
+                        ] else if (_selectedVariation == 'Seam') ...[
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              _buildSelectableButton(
+                                label: 'In Seam',
+                                isSelected: _selectedDirection == 'In',
+                                onTap: () => setState(() => _selectedDirection = 'In'),
+                              ),
+                              const SizedBox(width: 8),
+                              _buildSelectableButton(
+                                label: 'Out Seam',
+                                isSelected: _selectedDirection == 'Out',
+                                onTap: () => setState(() => _selectedDirection = 'Out'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ] else ...[
                         Row(
                           children: [
                             _buildSelectableButton(
@@ -733,6 +781,7 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                             ),
                           ],
                         ),
+                      ],
 
                       const SizedBox(height: 18),
 
