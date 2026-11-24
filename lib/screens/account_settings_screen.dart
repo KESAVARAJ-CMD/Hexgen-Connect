@@ -455,7 +455,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
           ],
         ),
         content: const Text(
-          'Are you sure you want to log out of Hexgen Connect? You will return to the role selection screen.',
+          'Are you sure you want to log out of Hexgen Player? You will return to the role selection screen.',
           style: TextStyle(
             fontSize: 13.5,
             color: AppTheme.slateBlue,
@@ -514,7 +514,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 
   Widget _buildHexgenLogo() {
     return const Text(
-      'HEXGEN CONNECT',
+      'HEXGEN PLAYER',
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: TextStyle(

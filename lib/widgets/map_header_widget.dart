@@ -53,7 +53,7 @@ class MapHeaderWidget extends StatelessWidget {
                   ],
                 ),
                 child: const Text(
-                  'HEXGEN CONNECT',
+                  'HEXGEN PLAYER',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(

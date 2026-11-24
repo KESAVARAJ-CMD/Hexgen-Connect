@@ -81,7 +81,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                           ),
                           const SizedBox(width: 8),
                           const Text(
-                            'HEXGEN CONNECT',
+                            'HEXGEN PLAYER',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(

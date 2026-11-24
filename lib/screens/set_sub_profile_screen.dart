@@ -368,7 +368,7 @@ class _SetSubProfileScreenState extends State<SetSubProfileScreen> {
 
   Widget _buildHexgenLogo() {
     return const Text(
-      'HEXGEN CONNECT',
+      'HEXGEN PLAYER',
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: TextStyle(

@@ -237,7 +237,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
         content: const Text(
-          'Are you sure you want to log out of Hexgen Connect?',
+          'Are you sure you want to log out of Hexgen Player?',
           style: TextStyle(
             fontSize: 13.5,
             color: Color(0xFF64748B),
@@ -835,7 +835,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 // App Version info
                 const Center(
                   child: Text(
-                    'Hexgen Connect v1.0.4',
+                    'Hexgen Player v1.0.4',
                     style: TextStyle(
                       fontSize: 11,
                       color: Color(0xFF94A3B8),

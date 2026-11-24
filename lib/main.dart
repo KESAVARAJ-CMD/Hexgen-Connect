@@ -31,7 +31,7 @@ class HexgenConnectApp extends StatelessWidget {
     );
 
     return MaterialApp(
-      title: 'Hexgen Connect',
+      title: 'Hexgen Player',
       debugShowCheckedModeBanner: false,
       theme: HexgenTheme.lightTheme.copyWith(textTheme: textTheme),
       home: const AuthGate(),
@@ -139,7 +139,7 @@ class _AuthGateState extends State<AuthGate> {
             ),
             const SizedBox(height: 24),
             Text(
-              'HEXGEN CONNECT',
+              'HEXGEN PLAYER',
               style: GoogleFonts.inter(
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
