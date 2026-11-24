@@ -5,6 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/services/sessions_service.dart';
 import '../core/theme/app_theme.dart';
+import '../core/widgets/cyber_glass_backdrop.dart';
 
 class OverConfig {
   double ballSpeed;
@@ -346,7 +347,7 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
           style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: AppTheme.navyBlue,
         duration: const Duration(seconds: 2),
       ),
     );
@@ -357,22 +358,9 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
     final isPace = _selectedBowlerType == 'Pace';
 
     return Scaffold(
-      backgroundColor: const Color(0xFF030712),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          color: Color(0xFF030712),
-          gradient: RadialGradient(
-            center: Alignment(0.4, -0.5),
-            radius: 1.4,
-            colors: [
-              Color(0xFF091632),
-              Color(0xFF040A18),
-              Color(0xFF02050E),
-            ],
-          ),
-        ),
+      backgroundColor: Colors.transparent,
+      body: CyberGlassBackdrop(
+        showOrbs: false,
         child: SafeArea(
           child: Column(
             children: [
@@ -388,13 +376,20 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                         width: 38,
                         height: 38,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0B1325),
+                          color: Colors.white,
                           shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFF1E2B45)),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: const Icon(
                           Icons.arrow_back_rounded,
-                          color: Colors.white,
+                          color: AppTheme.navyBlue,
                           size: 20,
                         ),
                       ),
@@ -408,7 +403,7 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w900,
-                          color: Colors.white,
+                          color: AppTheme.navyBlue,
                           letterSpacing: 0.8,
                         ),
                         maxLines: 1,
@@ -426,11 +421,11 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                           _overConfigs[_selectedOver] = OverConfig();
                         });
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Over $_selectedOver reset to default configuration'),
+                          const SnackBar(
+                            content: Text('Over reset to default configuration'),
                             behavior: SnackBarBehavior.floating,
-                            backgroundColor: const Color(0xFF0F172A),
-                            duration: const Duration(seconds: 1),
+                            backgroundColor: AppTheme.navyBlue,
+                            duration: Duration(seconds: 1),
                           ),
                         );
                       },
@@ -452,9 +447,16 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0B1325).withValues(alpha: 0.75),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFF1E2B45), width: 1.1),
+                          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.1),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -464,8 +466,8 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                               children: [
                                 const Icon(
                                   Icons.edit_note_rounded,
-                                  color: Color(0xFF00C6FF),
-                                  size: 20,
+                                  color: AppTheme.electricBlue,
+                                  size: 22,
                                 ),
                                 const SizedBox(width: 8),
                                 Expanded(
@@ -474,13 +476,13 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                                     style: const TextStyle(
                                       fontSize: 13.5,
                                       fontWeight: FontWeight.w700,
-                                      color: Colors.white,
+                                      color: AppTheme.navyBlue,
                                     ),
                                     decoration: const InputDecoration(
                                       hintText: 'Session Name (e.g. Batting Practice 1)',
                                       hintStyle: TextStyle(
                                         fontSize: 12.5,
-                                        color: Color(0xFF64748B),
+                                        color: Color(0xFF94A3B8),
                                         fontWeight: FontWeight.normal,
                                       ),
                                       border: InputBorder.none,
@@ -492,7 +494,7 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                               ],
                             ),
                             const SizedBox(height: 12),
-                            const Divider(color: Color(0xFF1E2B45), height: 1),
+                            const Divider(color: Color(0xFFE2E8F0), height: 1),
                             const SizedBox(height: 12),
 
                             // Total Overs Stepper & Copy to All
@@ -506,7 +508,7 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                                       style: const TextStyle(
                                         fontSize: 12.5,
                                         fontWeight: FontWeight.w800,
-                                        color: Color(0xFF00C6FF),
+                                        color: AppTheme.navyBlue,
                                       ),
                                     ),
                                     const SizedBox(width: 8),
@@ -514,9 +516,9 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                                     Container(
                                       height: 30,
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF070D1B),
+                                        color: const Color(0xFFF8FAFC),
                                         borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(color: const Color(0xFF1E2B45)),
+                                        border: Border.all(color: const Color(0xFFE2E8F0)),
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
@@ -525,7 +527,7 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                                             icon: const Icon(Icons.remove_rounded, size: 14),
                                             padding: EdgeInsets.zero,
                                             constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
-                                            color: _totalOvers > 1 ? Colors.white : const Color(0xFF475569),
+                                            color: _totalOvers > 1 ? AppTheme.navyBlue : const Color(0xFFCBD5E1),
                                             onPressed: _totalOvers > 1 ? () => _updateTotalOvers(_totalOvers - 1) : null,
                                           ),
                                           Padding(
@@ -535,7 +537,7 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                                               style: const TextStyle(
                                                 fontSize: 11.5,
                                                 fontWeight: FontWeight.w700,
-                                                color: Colors.white,
+                                                color: AppTheme.navyBlue,
                                               ),
                                             ),
                                           ),
@@ -543,7 +545,7 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                                             icon: const Icon(Icons.add_rounded, size: 14),
                                             padding: EdgeInsets.zero,
                                             constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
-                                            color: _totalOvers < 10 ? const Color(0xFF00C6FF) : const Color(0xFF475569),
+                                            color: _totalOvers < 10 ? AppTheme.electricBlue : const Color(0xFFCBD5E1),
                                             onPressed: _totalOvers < 10 ? () => _updateTotalOvers(_totalOvers + 1) : null,
                                           ),
                                         ],
@@ -557,21 +559,21 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF00C6FF).withValues(alpha: 0.12),
+                                      color: AppTheme.electricBlue.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: const Color(0xFF00C6FF).withValues(alpha: 0.4)),
+                                      border: Border.all(color: AppTheme.electricBlue.withValues(alpha: 0.3)),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: const [
-                                        Icon(Icons.copy_rounded, color: Color(0xFF00C6FF), size: 12),
+                                        Icon(Icons.copy_rounded, color: AppTheme.electricBlue, size: 12),
                                         SizedBox(width: 4),
                                         Text(
                                           'Copy All',
                                           style: TextStyle(
                                             fontSize: 10.5,
                                             fontWeight: FontWeight.w800,
-                                            color: Color(0xFF00C6FF),
+                                            color: AppTheme.electricBlue,
                                           ),
                                         ),
                                       ],
@@ -601,28 +603,28 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                                           width: 40,
                                           height: 38,
                                           decoration: BoxDecoration(
-                                            gradient: isSelected
-                                                ? const LinearGradient(
-                                                    colors: [Color(0xFF0072FF), Color(0xFF00C6FF)],
-                                                    begin: Alignment.centerLeft,
-                                                    end: Alignment.centerRight,
-                                                  )
-                                                : null,
-                                            color: isSelected ? null : const Color(0xFF070D1B),
+                                            gradient: isSelected ? AppTheme.primaryCtaGradient : null,
+                                            color: isSelected ? null : Colors.white,
                                             borderRadius: BorderRadius.circular(10),
                                             border: Border.all(
-                                              color: isSelected ? Colors.transparent : const Color(0xFF1E2B45),
+                                              color: isSelected ? Colors.transparent : const Color(0xFFE2E8F0),
                                               width: 1.1,
                                             ),
                                             boxShadow: isSelected
                                                 ? [
                                                     BoxShadow(
-                                                      color: const Color(0xFF00C6FF).withValues(alpha: 0.4),
+                                                      color: AppTheme.electricBlue.withValues(alpha: 0.35),
                                                       blurRadius: 8,
                                                       offset: const Offset(0, 2),
                                                     ),
                                                   ]
-                                                : null,
+                                                : [
+                                                    BoxShadow(
+                                                      color: Colors.black.withValues(alpha: 0.02),
+                                                      blurRadius: 4,
+                                                      offset: const Offset(0, 1),
+                                                    ),
+                                                  ],
                                           ),
                                           child: Center(
                                             child: Text(
@@ -630,7 +632,7 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                                               style: TextStyle(
                                                 fontSize: 13.5,
                                                 fontWeight: FontWeight.w900,
-                                                color: isSelected ? Colors.white : const Color(0xFF94A3B8),
+                                                color: isSelected ? Colors.white : AppTheme.navyBlue,
                                               ),
                                             ),
                                           ),
@@ -645,14 +647,14 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                                         height: 38,
                                         padding: const EdgeInsets.symmetric(horizontal: 10),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFF070D1B),
+                                          color: Colors.white,
                                           borderRadius: BorderRadius.circular(10),
                                           border: Border.all(
-                                            color: const Color(0xFF00C6FF).withValues(alpha: 0.4),
+                                            color: AppTheme.electricBlue.withValues(alpha: 0.4),
                                           ),
                                         ),
                                         child: const Center(
-                                          child: Icon(Icons.add_rounded, color: Color(0xFF00C6FF), size: 18),
+                                          child: Icon(Icons.add_rounded, color: AppTheme.electricBlue, size: 18),
                                         ),
                                       ),
                                     ),
@@ -669,13 +671,13 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                       _buildSectionHeader('BOWLER STYLE'),
                       Row(
                         children: [
-                          _buildCyberButton(
+                          _buildSelectableButton(
                             label: 'Pace',
                             isSelected: _selectedBowlerType == 'Pace',
                             onTap: () => _onBowlerTypeChanged('Pace'),
                           ),
                           const SizedBox(width: 10),
-                          _buildCyberButton(
+                          _buildSelectableButton(
                             label: 'Spin',
                             isSelected: _selectedBowlerType == 'Spin',
                             onTap: () => _onBowlerTypeChanged('Spin'),
@@ -690,19 +692,19 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                       if (isPace)
                         Row(
                           children: [
-                            _buildCyberButton(
+                            _buildSelectableButton(
                               label: 'Straight',
                               isSelected: _selectedVariation == 'Straight',
                               onTap: () => setState(() => _selectedVariation = 'Straight'),
                             ),
                             const SizedBox(width: 8),
-                            _buildCyberButton(
+                            _buildSelectableButton(
                               label: 'Swing',
                               isSelected: _selectedVariation == 'Swing',
                               onTap: () => setState(() => _selectedVariation = 'Swing'),
                             ),
                             const SizedBox(width: 8),
-                            _buildCyberButton(
+                            _buildSelectableButton(
                               label: 'Seam',
                               isSelected: _selectedVariation == 'Seam',
                               onTap: () => setState(() => _selectedVariation = 'Seam'),
@@ -712,19 +714,19 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                       else
                         Row(
                           children: [
-                            _buildCyberButton(
+                            _buildSelectableButton(
                               label: 'Straight',
                               isSelected: _selectedVariation == 'Straight',
                               onTap: () => setState(() => _selectedVariation = 'Straight'),
                             ),
                             const SizedBox(width: 8),
-                            _buildCyberButton(
+                            _buildSelectableButton(
                               label: 'Off Spin',
                               isSelected: _selectedVariation == 'Off Spin',
                               onTap: () => setState(() => _selectedVariation = 'Off Spin'),
                             ),
                             const SizedBox(width: 8),
-                            _buildCyberButton(
+                            _buildSelectableButton(
                               label: 'Leg Spin',
                               isSelected: _selectedVariation == 'Leg Spin',
                               onTap: () => setState(() => _selectedVariation = 'Leg Spin'),
@@ -738,19 +740,19 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                       _buildSectionHeader('INTENSITY / LEVEL'),
                       Row(
                         children: [
-                          _buildCyberButton(
+                          _buildSelectableButton(
                             label: 'Basic',
                             isSelected: _selectedLevel == 'Basic',
                             onTap: () => setState(() => _selectedLevel = 'Basic'),
                           ),
                           const SizedBox(width: 8),
-                          _buildCyberButton(
+                          _buildSelectableButton(
                             label: 'Medium',
                             isSelected: _selectedLevel == 'Medium',
                             onTap: () => setState(() => _selectedLevel = 'Medium'),
                           ),
                           const SizedBox(width: 8),
-                          _buildCyberButton(
+                          _buildSelectableButton(
                             label: 'High',
                             isSelected: _selectedLevel == 'High',
                             onTap: () => setState(() => _selectedLevel = 'High'),
@@ -770,31 +772,31 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                       _buildSectionHeader('LINE (1 - 5)'),
                       Row(
                         children: [
-                          _buildCyberButton(
+                          _buildSelectableButton(
                             label: 'L1',
                             isSelected: _selectedLine == 1,
                             onTap: () => setState(() => _selectedLine = 1),
                           ),
                           const SizedBox(width: 6),
-                          _buildCyberButton(
+                          _buildSelectableButton(
                             label: 'L2',
                             isSelected: _selectedLine == 2,
                             onTap: () => setState(() => _selectedLine = 2),
                           ),
                           const SizedBox(width: 6),
-                          _buildCyberButton(
+                          _buildSelectableButton(
                             label: 'L3',
                             isSelected: _selectedLine == 3,
                             onTap: () => setState(() => _selectedLine = 3),
                           ),
                           const SizedBox(width: 6),
-                          _buildCyberButton(
+                          _buildSelectableButton(
                             label: 'L4',
                             isSelected: _selectedLine == 4,
                             onTap: () => setState(() => _selectedLine = 4),
                           ),
                           const SizedBox(width: 6),
-                          _buildCyberButton(
+                          _buildSelectableButton(
                             label: 'L5',
                             isSelected: _selectedLine == 5,
                             onTap: () => setState(() => _selectedLine = 5),
@@ -808,25 +810,25 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                       _buildSectionHeader('LENGTH'),
                       Row(
                         children: [
-                          _buildCyberButton(
+                          _buildSelectableButton(
                             label: 'SLOT',
                             isSelected: _selectedLength.toUpperCase() == 'SLOT',
                             onTap: () => setState(() => _selectedLength = 'SLOT'),
                           ),
                           const SizedBox(width: 8),
-                          _buildCyberButton(
+                          _buildSelectableButton(
                             label: 'FULL',
                             isSelected: _selectedLength.toUpperCase() == 'FULL',
                             onTap: () => setState(() => _selectedLength = 'FULL'),
                           ),
                           const SizedBox(width: 8),
-                          _buildCyberButton(
+                          _buildSelectableButton(
                             label: 'GOOD',
                             isSelected: _selectedLength.toUpperCase() == 'GOOD',
                             onTap: () => setState(() => _selectedLength = 'GOOD'),
                           ),
                           const SizedBox(width: 8),
-                          _buildCyberButton(
+                          _buildSelectableButton(
                             label: 'SHORT',
                             isSelected: _selectedLength.toUpperCase() == 'SHORT',
                             onTap: () => setState(() => _selectedLength = 'SHORT'),
@@ -843,16 +845,12 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                           height: 52,
                           width: double.infinity,
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF0072FF), Color(0xFF00D4FF)],
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                            ),
+                            gradient: AppTheme.primaryCtaGradient,
                             borderRadius: BorderRadius.circular(26),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF00D4FF).withValues(alpha: 0.45),
-                                blurRadius: 16,
+                                color: AppTheme.electricBlue.withValues(alpha: 0.35),
+                                blurRadius: 14,
                                 offset: const Offset(0, 4),
                               ),
                             ],
@@ -889,16 +887,16 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
       child: Text(
         title,
         style: const TextStyle(
-          fontSize: 11.5,
+          fontSize: 12,
           fontWeight: FontWeight.w800,
-          color: Color(0xFF00C6FF),
-          letterSpacing: 1.2,
+          color: AppTheme.navyBlue,
+          letterSpacing: 0.8,
         ),
       ),
     );
   }
 
-  Widget _buildCyberButton({
+  Widget _buildSelectableButton({
     required String label,
     required bool isSelected,
     required VoidCallback onTap,
@@ -912,35 +910,35 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
           height: 48,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            gradient: isSelected
-                ? const LinearGradient(
-                    colors: [Color(0xFF0072FF), Color(0xFF00C6FF)],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  )
-                : null,
-            color: isSelected ? null : const Color(0xFF0B1325),
+            gradient: isSelected ? AppTheme.primaryCtaGradient : null,
+            color: isSelected ? null : Colors.white,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isSelected ? Colors.transparent : const Color(0xFF1E2B45),
+              color: isSelected ? Colors.transparent : const Color(0xFFE2E8F0),
               width: 1.2,
             ),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF00C6FF).withValues(alpha: 0.4),
-                      blurRadius: 12,
+                      color: AppTheme.electricBlue.withValues(alpha: 0.35),
+                      blurRadius: 10,
                       offset: const Offset(0, 3),
                     ),
                   ]
-                : [],
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
           ),
           child: Text(
             label,
             style: TextStyle(
               fontSize: 13.5,
               fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
-              color: isSelected ? Colors.white : const Color(0xFF94A3B8),
+              color: isSelected ? Colors.white : AppTheme.navyBlue,
               letterSpacing: 0.3,
             ),
             maxLines: 1,
@@ -956,12 +954,19 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFF0B1325),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFF1E2B45),
+          color: const Color(0xFFE2E8F0),
           width: 1.2,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -970,22 +975,22 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: const [
-                Text('50', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8))),
-                Text('70', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8))),
-                Text('90', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8))),
-                Text('110', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8))),
-                Text('130', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8))),
-                Text('150', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8))),
+                Text('50', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF64748B))),
+                Text('70', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF64748B))),
+                Text('90', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF64748B))),
+                Text('110', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF64748B))),
+                Text('130', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF64748B))),
+                Text('150', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF64748B))),
               ],
             ),
           ),
           const SizedBox(height: 6),
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
-              activeTrackColor: const Color(0xFF00C6FF),
-              inactiveTrackColor: const Color(0xFF1E2B45),
-              thumbColor: const Color(0xFF00E5FF),
-              overlayColor: const Color(0xFF00E5FF).withValues(alpha: 0.18),
+              activeTrackColor: AppTheme.electricBlue,
+              inactiveTrackColor: const Color(0xFFE2E8F0),
+              thumbColor: AppTheme.electricBlue,
+              overlayColor: AppTheme.electricBlue.withValues(alpha: 0.18),
               trackHeight: 3.5,
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8.5),
             ),
