@@ -148,6 +148,12 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
           }
         }
 
+        if (overBowlerType == 'Spin') {
+          if (overVariation != 'Off Spin' && overVariation != 'Leg Spin') {
+            overVariation = 'Off Spin';
+          }
+        }
+
         _overConfigs[i] = OverConfig(
           ballSpeed: overSpeed,
           selectedArm: s.armType,
@@ -208,8 +214,8 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
           _selectedVariation = 'Swing';
         }
       } else {
-        // Spin: swing and seam must NOT be visible or selected!
-        if (_selectedVariation == 'Swing' || _selectedVariation == 'Seam') {
+        // Spin: Straight, swing, and seam must NOT be visible or selected!
+        if (_selectedVariation != 'Off Spin' && _selectedVariation != 'Leg Spin') {
           _selectedVariation = 'Off Spin';
         }
       }
@@ -715,17 +721,11 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                         Row(
                           children: [
                             _buildSelectableButton(
-                              label: 'Straight',
-                              isSelected: _selectedVariation == 'Straight',
-                              onTap: () => setState(() => _selectedVariation = 'Straight'),
-                            ),
-                            const SizedBox(width: 8),
-                            _buildSelectableButton(
                               label: 'Off Spin',
                               isSelected: _selectedVariation == 'Off Spin',
                               onTap: () => setState(() => _selectedVariation = 'Off Spin'),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 10),
                             _buildSelectableButton(
                               label: 'Leg Spin',
                               isSelected: _selectedVariation == 'Leg Spin',
