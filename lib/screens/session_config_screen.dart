@@ -5,30 +5,30 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/services/sessions_service.dart';
 import '../core/theme/app_theme.dart';
-import '../core/widgets/cyber_controls.dart';
-import '../core/widgets/cyber_glass_backdrop.dart';
 
 class OverConfig {
   double ballSpeed;
   String selectedArm;
-  String selectedBowlerType;
-  String selectedLength;
-  String selectedVariation;
-  String selectedDirection;
-  String selectedLevel;
+  String selectedBowlerType; // 'Pace' or 'Spin'
+  String selectedLength;     // 'SLOT', 'FULL', 'GOOD', 'SHORT'
+  String selectedVariation;  // 'Straight', 'Swing', 'Seam' (or for spin: 'Straight', 'Off Spin', 'Leg Spin')
+  String selectedDirection;  // 'In' or 'Out'
+  String selectedLevel;      // 'Basic', 'Medium', 'High'
+  int selectedLine;          // 1 to 5 (L1 - L5)
   bool randomSpin;
   bool randomLength;
   bool randomSpeed;
 
   OverConfig({
-    this.ballSpeed = 90.0,
+    this.ballSpeed = 50.0,
     this.selectedArm = 'Right Arm',
     this.selectedBowlerType = 'Pace',
-    this.selectedLength = 'Good',
+    this.selectedLength = 'GOOD',
     this.selectedVariation = 'Swing',
     this.selectedDirection = 'In',
-    this.selectedLevel = 'Medium',
-    this.randomSpin = true,
+    this.selectedLevel = 'Basic',
+    this.selectedLine = 3,
+    this.randomSpin = false,
     this.randomLength = false,
     this.randomSpeed = false,
   });
@@ -42,6 +42,7 @@ class OverConfig {
       selectedVariation: selectedVariation,
       selectedDirection: selectedDirection,
       selectedLevel: selectedLevel,
+      selectedLine: selectedLine,
       randomSpin: randomSpin,
       randomLength: randomLength,
       randomSpeed: randomSpeed,
@@ -96,7 +97,7 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
       final s = widget.sessionToEdit!;
       _sessionNameController.text = s.name;
 
-      final speedVal = double.tryParse(s.speed.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 90.0;
+      final speedVal = double.tryParse(s.speed.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 50.0;
 
       int count = s.overs.isNotEmpty ? s.overs.length : 6;
       final match = RegExp(r'\d+').firstMatch(s.oversCount);
@@ -113,6 +114,11 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
         String overVariation = s.variation;
         String overBowlerType = s.bowlerType;
         String overDirection = s.direction;
+        int overLine = 3;
+        String overLength = s.length.toUpperCase();
+        if (!['SLOT', 'FULL', 'GOOD', 'SHORT'].contains(overLength)) {
+          overLength = 'GOOD';
+        }
 
         if (i <= s.overs.length) {
           final overMap = s.overs[i - 1];
@@ -127,16 +133,29 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
               overBowlerType = 'Pace';
             }
           }
+          if (overMap['variation'] != null) {
+            overVariation = overMap['variation'].toString();
+          }
+          if (overMap['lineNo'] != null || overMap['session_line'] != null) {
+            overLine = int.tryParse((overMap['lineNo'] ?? overMap['session_line']).toString()) ?? 3;
+          }
+          if (overMap['length'] != null) {
+            final lUpper = overMap['length'].toString().toUpperCase();
+            if (['SLOT', 'FULL', 'GOOD', 'SHORT'].contains(lUpper)) {
+              overLength = lUpper;
+            }
+          }
         }
 
         _overConfigs[i] = OverConfig(
           ballSpeed: overSpeed,
           selectedArm: s.armType,
           selectedBowlerType: overBowlerType,
-          selectedLength: s.length,
+          selectedLength: overLength,
           selectedVariation: overVariation,
           selectedDirection: overDirection,
           selectedLevel: s.level,
+          selectedLine: overLine,
         );
       }
     } else {
@@ -163,9 +182,6 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
   double get _ballSpeed => _currentConfig.ballSpeed;
   set _ballSpeed(double val) => _currentConfig.ballSpeed = val;
 
-  String get _selectedArm => _currentConfig.selectedArm;
-  set _selectedArm(String val) => _currentConfig.selectedArm = val;
-
   String get _selectedBowlerType => _currentConfig.selectedBowlerType;
   set _selectedBowlerType(String val) => _currentConfig.selectedBowlerType = val;
 
@@ -175,20 +191,29 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
   String get _selectedVariation => _currentConfig.selectedVariation;
   set _selectedVariation(String val) => _currentConfig.selectedVariation = val;
 
-  String get _selectedDirection => _currentConfig.selectedDirection;
-  set _selectedDirection(String val) => _currentConfig.selectedDirection = val;
-
   String get _selectedLevel => _currentConfig.selectedLevel;
   set _selectedLevel(String val) => _currentConfig.selectedLevel = val;
 
-  bool get _randomSpin => _currentConfig.randomSpin;
-  set _randomSpin(bool val) => _currentConfig.randomSpin = val;
+  int get _selectedLine => _currentConfig.selectedLine;
+  set _selectedLine(int val) => _currentConfig.selectedLine = val;
 
-  bool get _randomLength => _currentConfig.randomLength;
-  set _randomLength(bool val) => _currentConfig.randomLength = val;
-
-  bool get _randomSpeed => _currentConfig.randomSpeed;
-  set _randomSpeed(bool val) => _currentConfig.randomSpeed = val;
+  void _onBowlerTypeChanged(String type) {
+    setState(() {
+      _selectedBowlerType = type;
+      if (type == 'Pace') {
+        if (_selectedVariation != 'Straight' &&
+            _selectedVariation != 'Swing' &&
+            _selectedVariation != 'Seam') {
+          _selectedVariation = 'Swing';
+        }
+      } else {
+        // Spin: swing and seam must NOT be visible or selected!
+        if (_selectedVariation == 'Swing' || _selectedVariation == 'Seam') {
+          _selectedVariation = 'Off Spin';
+        }
+      }
+    });
+  }
 
   Future<void> _onSave() async {
     final sessionTitle = _sessionNameController.text.trim().isNotEmpty
@@ -202,13 +227,15 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
         'over': 'Over ${i.toString().padLeft(2, '0')}',
         'summary': '6 Balls • ${config.ballSpeed.toStringAsFixed(1)} km/h • ${config.selectedVariation}',
         'speed': '${config.ballSpeed.toStringAsFixed(1)} km/h',
-        'type': '${config.selectedBowlerType} - ${config.selectedVariation} (${config.selectedDirection})',
+        'type': '${config.selectedBowlerType} - ${config.selectedVariation}',
         'armType': config.selectedArm,
         'bowlerType': config.selectedBowlerType,
         'length': config.selectedLength,
         'variation': config.selectedVariation,
         'direction': config.selectedDirection,
         'level': config.selectedLevel,
+        'lineNo': config.selectedLine,
+        'session_line': config.selectedLine,
         'randomSpin': config.randomSpin,
         'randomLength': config.randomLength,
         'randomSpeed': config.randomSpeed,
@@ -233,11 +260,11 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
         name: sessionTitle,
         oversCount: '$_totalOvers ${_totalOvers == 1 ? "Over" : "Overs"}',
         speed: '${_ballSpeed.toStringAsFixed(1)} km/h',
-        armType: _selectedArm,
+        armType: _currentConfig.selectedArm,
         bowlerType: _selectedBowlerType,
         length: _selectedLength,
         variation: _selectedVariation,
-        direction: _selectedDirection,
+        direction: _currentConfig.selectedDirection,
         level: _selectedLevel,
         overs: generatedOvers,
       );
@@ -275,17 +302,17 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
       coach: 'Self Practice',
       oversCount: '$_totalOvers ${_totalOvers == 1 ? "Over" : "Overs"}',
       speed: '${_ballSpeed.toStringAsFixed(1)} km/h',
-      armType: _selectedArm,
+      armType: _currentConfig.selectedArm,
       bowlerType: _selectedBowlerType,
       length: _selectedLength,
       variation: _selectedVariation,
-      direction: _selectedDirection,
+      direction: _currentConfig.selectedDirection,
       level: _selectedLevel,
       isUpcoming: true,
       overs: generatedOvers,
     );
 
-    // Save temporarily and persistently into SessionsService
+    // Save persistently into SessionsService
     await SessionsService().addSession(newSession);
 
     if (!mounted) return;
@@ -316,10 +343,10 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
       SnackBar(
         content: Text(
           'Over $_selectedOver settings copied to all $_totalOvers overs!',
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: AppTheme.navyBlue,
+        backgroundColor: const Color(0xFF0F172A),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -327,27 +354,48 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isPace = _selectedBowlerType == 'Pace';
+
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: CyberGlassBackdrop(
-        showOrbs: false,
+      backgroundColor: const Color(0xFF030712),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          color: Color(0xFF030712),
+          gradient: RadialGradient(
+            center: Alignment(0.4, -0.5),
+            radius: 1.4,
+            colors: [
+              Color(0xFF091632),
+              Color(0xFF040A18),
+              Color(0xFF02050E),
+            ],
+          ),
+        ),
         child: SafeArea(
           child: Column(
             children: [
-              // ── 1. Top Header Bar: < SESSION 1 CONFIGURATION 🗑️ ───────────
+              // ── 1. Top Header Bar ──────────────────────────────────────────
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 child: Row(
                   children: [
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
                       behavior: HitTestBehavior.opaque,
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                        child: Icon(
+                      child: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0B1325),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFF1E2B45)),
+                        ),
+                        child: const Icon(
                           Icons.arrow_back_rounded,
-                          color: AppTheme.navyBlue,
-                          size: 24,
+                          color: Colors.white,
+                          size: 20,
                         ),
                       ),
                     ),
@@ -358,10 +406,10 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                             ? 'EDIT SESSION CONFIGURATION'
                             : (widget.initialSessionTitle ?? 'SESSION CONFIGURATION'),
                         style: const TextStyle(
-                          fontSize: 16.5,
+                          fontSize: 15,
                           fontWeight: FontWeight.w900,
-                          color: AppTheme.navyBlue,
-                          letterSpacing: 0.5,
+                          color: Colors.white,
+                          letterSpacing: 0.8,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -371,7 +419,7 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                       icon: const Icon(
                         Icons.delete_outline_rounded,
                         color: Color(0xFFEF4444),
-                        size: 24,
+                        size: 22,
                       ),
                       onPressed: () {
                         setState(() {
@@ -381,7 +429,7 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                           SnackBar(
                             content: Text('Over $_selectedOver reset to default configuration'),
                             behavior: SnackBarBehavior.floating,
-                            backgroundColor: AppTheme.navyBlue,
+                            backgroundColor: const Color(0xFF0F172A),
                             duration: const Duration(seconds: 1),
                           ),
                         );
@@ -395,496 +443,219 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  physics: const BouncingScrollPhysics(),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ── Session Name Card ────────────────────────────────────
-                      _buildCardContainer(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildCardTitle('Session Name'),
-                            const SizedBox(height: 8),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF8FAFC),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
-                              ),
-                              child: TextField(
-                                controller: _sessionNameController,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppTheme.navyBlue,
-                                ),
-                                decoration: const InputDecoration(
-                                  hintText: 'e.g. Evening Batting Practice, Cover Drive Drill',
-                                  hintStyle: TextStyle(
-                                    fontSize: 12.5,
-                                    color: Color(0xFF94A3B8),
-                                    fontWeight: FontWeight.normal,
-                                  ),
-                                  prefixIcon: Icon(
-                                    Icons.edit_note_rounded,
-                                    color: AppTheme.electricBlue,
-                                    size: 22,
-                                  ),
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                ),
-                              ),
-                            ),
-                          ],
+                      // ── Session Name & Overs Controls ──────────────────────
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0B1325).withValues(alpha: 0.75),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFF1E2B45), width: 1.1),
                         ),
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      // ── Total Overs Selector Card ────────────────────────────
-                      _buildCardContainer(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // Session Name Input
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.edit_note_rounded,
+                                  color: Color(0xFF00C6FF),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _sessionNameController,
+                                    style: const TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      hintText: 'Session Name (e.g. Batting Practice 1)',
+                                      hintStyle: TextStyle(
+                                        fontSize: 12.5,
+                                        color: Color(0xFF64748B),
+                                        fontWeight: FontWeight.normal,
+                                      ),
+                                      border: InputBorder.none,
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.symmetric(vertical: 4),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            const Divider(color: Color(0xFF1E2B45), height: 1),
+                            const SizedBox(height: 12),
+
+                            // Total Overs Stepper & Copy to All
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Row(
                                   children: [
-                                    _buildCardTitle('Total Overs'),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.electricBlue.withValues(alpha: 0.12),
-                                        borderRadius: BorderRadius.circular(10),
+                                    Text(
+                                      'Over $_selectedOver of $_totalOvers',
+                                      style: const TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFF00C6FF),
                                       ),
-                                      child: const Text(
-                                        'Max 10',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w800,
-                                          color: AppTheme.electricBlue,
-                                        ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    // Stepper
+                                    Container(
+                                      height: 30,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF070D1B),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: const Color(0xFF1E2B45)),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(Icons.remove_rounded, size: 14),
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+                                            color: _totalOvers > 1 ? Colors.white : const Color(0xFF475569),
+                                            onPressed: _totalOvers > 1 ? () => _updateTotalOvers(_totalOvers - 1) : null,
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                                            child: Text(
+                                              '$_totalOvers Ovs',
+                                              style: const TextStyle(
+                                                fontSize: 11.5,
+                                                fontWeight: FontWeight.w700,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.add_rounded, size: 14),
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+                                            color: _totalOvers < 10 ? const Color(0xFF00C6FF) : const Color(0xFF475569),
+                                            onPressed: _totalOvers < 10 ? () => _updateTotalOvers(_totalOvers + 1) : null,
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
                                 ),
-                                // Stepper: [-] X Overs [+]
-                                Container(
-                                  height: 38,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF8FAFC),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.remove_rounded, size: 18),
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-                                        color: _totalOvers > 1 ? AppTheme.navyBlue : const Color(0xFFCBD5E1),
-                                        onPressed: _totalOvers > 1 ? () => _updateTotalOvers(_totalOvers - 1) : null,
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                                        child: Text(
-                                          '$_totalOvers ${_totalOvers == 1 ? "Over" : "Overs"}',
-                                          style: const TextStyle(
-                                            fontSize: 13.5,
-                                            fontWeight: FontWeight.w900,
-                                            color: AppTheme.navyBlue,
+                                // Copy to All Overs Button
+                                GestureDetector(
+                                  onTap: _onCopyToAllOvers,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF00C6FF).withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: const Color(0xFF00C6FF).withValues(alpha: 0.4)),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: const [
+                                        Icon(Icons.copy_rounded, color: Color(0xFF00C6FF), size: 12),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          'Copy All',
+                                          style: TextStyle(
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.w800,
+                                            color: Color(0xFF00C6FF),
                                           ),
                                         ),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.add_rounded, size: 18),
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-                                        color: _totalOvers < 10 ? AppTheme.electricBlue : const Color(0xFFCBD5E1),
-                                        onPressed: _totalOvers < 10 ? () => _updateTotalOvers(_totalOvers + 1) : null,
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 12),
-                            // Quick Select Chips (1 to 10)
+                            const SizedBox(height: 10),
+
+                            // Over Chips (1 to _totalOvers)
                             SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
                               physics: const BouncingScrollPhysics(),
                               child: Row(
-                                children: List.generate(10, (index) {
-                                  final count = index + 1;
-                                  final isCurrent = _totalOvers == count;
-                                  return Padding(
-                                    padding: EdgeInsets.only(right: index < 9 ? 8 : 0),
-                                    child: GestureDetector(
-                                      onTap: () => _updateTotalOvers(count),
-                                      child: AnimatedContainer(
-                                        duration: const Duration(milliseconds: 180),
-                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                children: [
+                                  ...List.generate(_totalOvers, (index) {
+                                    final overNum = index + 1;
+                                    final isSelected = _selectedOver == overNum;
+
+                                    return Padding(
+                                      padding: const EdgeInsets.only(right: 8),
+                                      child: GestureDetector(
+                                        onTap: () => setState(() => _selectedOver = overNum),
+                                        child: AnimatedContainer(
+                                          duration: const Duration(milliseconds: 180),
+                                          width: 40,
+                                          height: 38,
+                                          decoration: BoxDecoration(
+                                            gradient: isSelected
+                                                ? const LinearGradient(
+                                                    colors: [Color(0xFF0072FF), Color(0xFF00C6FF)],
+                                                    begin: Alignment.centerLeft,
+                                                    end: Alignment.centerRight,
+                                                  )
+                                                : null,
+                                            color: isSelected ? null : const Color(0xFF070D1B),
+                                            borderRadius: BorderRadius.circular(10),
+                                            border: Border.all(
+                                              color: isSelected ? Colors.transparent : const Color(0xFF1E2B45),
+                                              width: 1.1,
+                                            ),
+                                            boxShadow: isSelected
+                                                ? [
+                                                    BoxShadow(
+                                                      color: const Color(0xFF00C6FF).withValues(alpha: 0.4),
+                                                      blurRadius: 8,
+                                                      offset: const Offset(0, 2),
+                                                    ),
+                                                  ]
+                                                : null,
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              '$overNum',
+                                              style: TextStyle(
+                                                fontSize: 13.5,
+                                                fontWeight: FontWeight.w900,
+                                                color: isSelected ? Colors.white : const Color(0xFF94A3B8),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                  if (_totalOvers < 10)
+                                    GestureDetector(
+                                      onTap: () => _updateTotalOvers(_totalOvers + 1),
+                                      child: Container(
+                                        height: 38,
+                                        padding: const EdgeInsets.symmetric(horizontal: 10),
                                         decoration: BoxDecoration(
-                                          gradient: isCurrent ? AppTheme.primaryCtaGradient : null,
-                                          color: isCurrent ? null : Colors.white,
+                                          color: const Color(0xFF070D1B),
                                           borderRadius: BorderRadius.circular(10),
                                           border: Border.all(
-                                            color: isCurrent ? Colors.transparent : const Color(0xFFE2E8F0),
-                                            width: 1.2,
-                                          ),
-                                          boxShadow: isCurrent
-                                              ? [
-                                                  BoxShadow(
-                                                    color: AppTheme.electricBlue.withValues(alpha: 0.3),
-                                                    blurRadius: 6,
-                                                    offset: const Offset(0, 2),
-                                                  ),
-                                                ]
-                                              : null,
-                                        ),
-                                        child: Text(
-                                          '$count ${count == 1 ? "Over" : "Overs"}',
-                                          style: TextStyle(
-                                            fontSize: 12.5,
-                                            fontWeight: isCurrent ? FontWeight.w900 : FontWeight.w700,
-                                            color: isCurrent ? Colors.white : AppTheme.navyBlue,
+                                            color: const Color(0xFF00C6FF).withValues(alpha: 0.4),
                                           ),
                                         ),
-                                      ),
-                                    ),
-                                  );
-                                }),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      // ── Over Selector Row ────────────────────────────────────
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              const Text(
-                                'Over',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppTheme.navyBlue,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.electricBlue.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  'Over $_selectedOver of $_totalOvers',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppTheme.electricBlue,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          Text(
-                            '$_totalOvers ${_totalOvers == 1 ? "Over" : "Overs"} Selected',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Over Number Chips (1 - _totalOvers) + Add Over Option
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        child: Row(
-                          children: [
-                            ...List.generate(_totalOvers, (index) {
-                              final overNum = index + 1;
-                              final isSelected = _selectedOver == overNum;
-
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedOver = overNum;
-                                    });
-                                  },
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 180),
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      gradient: isSelected ? AppTheme.primaryCtaGradient : null,
-                                      color: isSelected ? null : Colors.white,
-                                      borderRadius: BorderRadius.circular(14),
-                                      border: isSelected
-                                          ? null
-                                          : Border.all(
-                                              color: const Color(0xFFE2E8F0),
-                                              width: 1.2,
-                                            ),
-                                      boxShadow: isSelected
-                                          ? [
-                                              BoxShadow(
-                                                color: AppTheme.electricBlue.withValues(alpha: 0.35),
-                                                blurRadius: 10,
-                                                offset: const Offset(0, 3),
-                                              ),
-                                            ]
-                                          : [
-                                              BoxShadow(
-                                                color: Colors.black.withValues(alpha: 0.02),
-                                                blurRadius: 6,
-                                                offset: const Offset(0, 2),
-                                              ),
-                                            ],
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        '$overNum',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w900,
-                                          color: isSelected ? Colors.white : AppTheme.navyBlue,
+                                        child: const Center(
+                                          child: Icon(Icons.add_rounded, color: Color(0xFF00C6FF), size: 18),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                              );
-                            }),
-                            if (_totalOvers < 10)
-                              GestureDetector(
-                                onTap: () => _updateTotalOvers(_totalOvers + 1),
-                                child: Container(
-                                  height: 48,
-                                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(
-                                      color: AppTheme.electricBlue.withValues(alpha: 0.4),
-                                      width: 1.2,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: const [
-                                      Icon(Icons.add_rounded, color: AppTheme.electricBlue, size: 20),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        'Add Over',
-                                        style: TextStyle(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w800,
-                                          color: AppTheme.electricBlue,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      // ── Card 1: Arm Type ─────────────────────────────────────
-                      _buildCardContainer(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildCardTitle('Arm Type'),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildSelectableButton(
-                                    label: 'Right Arm',
-                                    icon: Icons.sports_cricket_rounded,
-                                    isSelected: _selectedArm == 'Right Arm',
-                                    onTap: () => setState(() => _selectedArm = 'Right Arm'),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: _buildSelectableButton(
-                                    label: 'Left Arm',
-                                    icon: Icons.sports_cricket_outlined,
-                                    isSelected: _selectedArm == 'Left Arm',
-                                    onTap: () => setState(() => _selectedArm = 'Left Arm'),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      // ── Card 2: Bowler Type ──────────────────────────────────
-                      _buildCardContainer(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildCardTitle('Bowler Type'),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildSelectableButton(
-                                    label: 'Pace',
-                                    icon: Icons.bolt_rounded,
-                                    isSelected: _selectedBowlerType == 'Pace',
-                                    onTap: () => setState(() => _selectedBowlerType = 'Pace'),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _buildSelectableButton(
-                                    label: 'Off Spin',
-                                    icon: Icons.sync_rounded,
-                                    isSelected: _selectedBowlerType == 'Off Spin',
-                                    onTap: () => setState(() => _selectedBowlerType = 'Off Spin'),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _buildSelectableButton(
-                                    label: 'Wrist Spin',
-                                    icon: Icons.autorenew_rounded,
-                                    isSelected: _selectedBowlerType == 'Wrist Spin',
-                                    onTap: () => setState(() => _selectedBowlerType = 'Wrist Spin'),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      // ── Card 3: Length (Slot, Full, Good, Short) ─────────────
-                      _buildCardContainer(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildCardTitle('Length'),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildSelectableButton(
-                                    label: 'Slot',
-                                    icon: Icons.rocket_launch_rounded,
-                                    isSelected: _selectedLength == 'Slot',
-                                    onTap: () => setState(() => _selectedLength = 'Slot'),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _buildSelectableButton(
-                                    label: 'Full',
-                                    icon: Icons.adjust_rounded,
-                                    isSelected: _selectedLength == 'Full',
-                                    onTap: () => setState(() => _selectedLength = 'Full'),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildSelectableButton(
-                                    label: 'Good',
-                                    icon: Icons.terrain_rounded,
-                                    isSelected: _selectedLength == 'Good',
-                                    onTap: () => setState(() => _selectedLength = 'Good'),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _buildSelectableButton(
-                                    label: 'Short',
-                                    icon: Icons.directions_run_rounded,
-                                    isSelected: _selectedLength == 'Short',
-                                    onTap: () => setState(() => _selectedLength = 'Short'),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      // ── Card 4: Speed Setting ────────────────────────────────
-                      _buildCardContainer(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildCardTitle('Speed Setting'),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Speed: ${_ballSpeed.toInt()} kmph',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFF64748B),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            SliderTheme(
-                              data: SliderTheme.of(context).copyWith(
-                                activeTrackColor: AppTheme.electricBlue,
-                                inactiveTrackColor: const Color(0xFFE2E8F0),
-                                thumbColor: AppTheme.electricBlue,
-                                overlayColor: AppTheme.electricBlue.withValues(alpha: 0.15),
-                                trackHeight: 4,
-                              ),
-                              child: Slider(
-                                value: _ballSpeed,
-                                min: 50,
-                                max: 150,
-                                divisions: 10,
-                                onChanged: (val) => setState(() => _ballSpeed = val),
-                              ),
-                            ),
-                            // Speed Tick Markers: 50 70 90 100 130 150
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 10),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: const [
-                                  Text('50', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
-                                  Text('70', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
-                                  Text('90', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.electricBlue)),
-                                  Text('100', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
-                                  Text('130', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
-                                  Text('150', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
                                 ],
                               ),
                             ),
@@ -892,204 +663,217 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 18),
 
-                      // ── Card 5: Variation & Direction ────────────────────────
-                      _buildCardContainer(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      // ── 1. BOWLER STYLE ────────────────────────────────────
+                      _buildSectionHeader('BOWLER STYLE'),
+                      Row(
+                        children: [
+                          _buildCyberButton(
+                            label: 'Pace',
+                            isSelected: _selectedBowlerType == 'Pace',
+                            onTap: () => _onBowlerTypeChanged('Pace'),
+                          ),
+                          const SizedBox(width: 10),
+                          _buildCyberButton(
+                            label: 'Spin',
+                            isSelected: _selectedBowlerType == 'Spin',
+                            onTap: () => _onBowlerTypeChanged('Spin'),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // ── 2. VARIATION (Only Pace has Swing & Seam!) ──────────
+                      _buildSectionHeader(isPace ? 'PACE VARIATION' : 'SPIN VARIATION'),
+                      if (isPace)
+                        Row(
                           children: [
-                            _buildCardTitle('Variation & Direction'),
-                            const SizedBox(height: 12),
-                            // Variation (Swing | Seam)
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildSelectableButton(
-                                    label: 'Swing',
-                                    icon: Icons.air_rounded,
-                                    isSelected: _selectedVariation == 'Swing',
-                                    onTap: () => setState(() => _selectedVariation = 'Swing'),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _buildSelectableButton(
-                                    label: 'Seam',
-                                    icon: Icons.trending_up_rounded,
-                                    isSelected: _selectedVariation == 'Seam',
-                                    onTap: () => setState(() => _selectedVariation = 'Seam'),
-                                  ),
-                                ),
-                              ],
+                            _buildCyberButton(
+                              label: 'Straight',
+                              isSelected: _selectedVariation == 'Straight',
+                              onTap: () => setState(() => _selectedVariation = 'Straight'),
                             ),
-                            const SizedBox(height: 14),
-
-                            // Choose Direction (In | Out)
-                            _buildCardTitle('Choose Direction'),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildSelectableButton(
-                                    label: 'In',
-                                    icon: Icons.south_west_rounded,
-                                    isSelected: _selectedDirection == 'In',
-                                    onTap: () => setState(() => _selectedDirection = 'In'),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _buildSelectableButton(
-                                    label: 'Out',
-                                    icon: Icons.north_east_rounded,
-                                    isSelected: _selectedDirection == 'Out',
-                                    onTap: () => setState(() => _selectedDirection = 'Out'),
-                                  ),
-                                ),
-                              ],
+                            const SizedBox(width: 8),
+                            _buildCyberButton(
+                              label: 'Swing',
+                              isSelected: _selectedVariation == 'Swing',
+                              onTap: () => setState(() => _selectedVariation = 'Swing'),
                             ),
-                            const SizedBox(height: 14),
-
-                            // Levels (Basic | Medium | High)
-                            _buildCardTitle('Levels'),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildSelectableButton(
-                                    label: 'Basic',
-                                    isSelected: _selectedLevel == 'Basic',
-                                    onTap: () => setState(() => _selectedLevel = 'Basic'),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _buildSelectableButton(
-                                    label: 'Medium',
-                                    isSelected: _selectedLevel == 'Medium',
-                                    onTap: () => setState(() => _selectedLevel = 'Medium'),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _buildSelectableButton(
-                                    label: 'High',
-                                    isSelected: _selectedLevel == 'High',
-                                    onTap: () => setState(() => _selectedLevel = 'High'),
-                                  ),
-                                ),
-                              ],
+                            const SizedBox(width: 8),
+                            _buildCyberButton(
+                              label: 'Seam',
+                              isSelected: _selectedVariation == 'Seam',
+                              onTap: () => setState(() => _selectedVariation = 'Seam'),
+                            ),
+                          ],
+                        )
+                      else
+                        Row(
+                          children: [
+                            _buildCyberButton(
+                              label: 'Straight',
+                              isSelected: _selectedVariation == 'Straight',
+                              onTap: () => setState(() => _selectedVariation = 'Straight'),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildCyberButton(
+                              label: 'Off Spin',
+                              isSelected: _selectedVariation == 'Off Spin',
+                              onTap: () => setState(() => _selectedVariation = 'Off Spin'),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildCyberButton(
+                              label: 'Leg Spin',
+                              isSelected: _selectedVariation == 'Leg Spin',
+                              onTap: () => setState(() => _selectedVariation = 'Leg Spin'),
                             ),
                           ],
                         ),
+
+                      const SizedBox(height: 18),
+
+                      // ── 3. INTENSITY / LEVEL ───────────────────────────────
+                      _buildSectionHeader('INTENSITY / LEVEL'),
+                      Row(
+                        children: [
+                          _buildCyberButton(
+                            label: 'Basic',
+                            isSelected: _selectedLevel == 'Basic',
+                            onTap: () => setState(() => _selectedLevel = 'Basic'),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildCyberButton(
+                            label: 'Medium',
+                            isSelected: _selectedLevel == 'Medium',
+                            onTap: () => setState(() => _selectedLevel = 'Medium'),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildCyberButton(
+                            label: 'High',
+                            isSelected: _selectedLevel == 'High',
+                            onTap: () => setState(() => _selectedLevel = 'High'),
+                          ),
+                        ],
                       ),
 
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 18),
 
-                      // ── Card 6: Randomization ────────────────────────────────
-                      _buildCardContainer(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildCardTitle('Randomization'),
-                            const SizedBox(height: 10),
-                            _buildToggleRow(
-                              title: 'Random Spin/Swing',
-                              value: _randomSpin,
-                              onChanged: (val) => setState(() => _randomSpin = val),
-                            ),
-                            const SizedBox(height: 8),
-                            _buildToggleRow(
-                              title: 'Random Length',
-                              value: _randomLength,
-                              onChanged: (val) => setState(() => _randomLength = val),
-                            ),
-                            const SizedBox(height: 8),
-                            _buildToggleRow(
-                              title: 'Random Speed',
-                              value: _randomSpeed,
-                              onChanged: (val) => setState(() => _randomSpeed = val),
-                            ),
-                          ],
-                        ),
+                      // ── 4. SPEED / KMPH (50) ────────────────────────────────
+                      _buildSectionHeader('SPEED / KMPH (${_ballSpeed.round()})'),
+                      _buildSpeedCard(),
+
+                      const SizedBox(height: 18),
+
+                      // ── 5. LINE (1 - 5) ────────────────────────────────────
+                      _buildSectionHeader('LINE (1 - 5)'),
+                      Row(
+                        children: [
+                          _buildCyberButton(
+                            label: 'L1',
+                            isSelected: _selectedLine == 1,
+                            onTap: () => setState(() => _selectedLine = 1),
+                          ),
+                          const SizedBox(width: 6),
+                          _buildCyberButton(
+                            label: 'L2',
+                            isSelected: _selectedLine == 2,
+                            onTap: () => setState(() => _selectedLine = 2),
+                          ),
+                          const SizedBox(width: 6),
+                          _buildCyberButton(
+                            label: 'L3',
+                            isSelected: _selectedLine == 3,
+                            onTap: () => setState(() => _selectedLine = 3),
+                          ),
+                          const SizedBox(width: 6),
+                          _buildCyberButton(
+                            label: 'L4',
+                            isSelected: _selectedLine == 4,
+                            onTap: () => setState(() => _selectedLine = 4),
+                          ),
+                          const SizedBox(width: 6),
+                          _buildCyberButton(
+                            label: 'L5',
+                            isSelected: _selectedLine == 5,
+                            onTap: () => setState(() => _selectedLine = 5),
+                          ),
+                        ],
                       ),
 
-                      const SizedBox(height: 20),
-                    ],
-                  ),
-                ),
-              ),
+                      const SizedBox(height: 18),
 
-              // ── 3. Bottom Action Buttons: Save | Copy to All Overs ───────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
+                      // ── 6. LENGTH (SLOT, FULL, GOOD, SHORT) ─────────────────
+                      _buildSectionHeader('LENGTH'),
+                      Row(
+                        children: [
+                          _buildCyberButton(
+                            label: 'SLOT',
+                            isSelected: _selectedLength.toUpperCase() == 'SLOT',
+                            onTap: () => setState(() => _selectedLength = 'SLOT'),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildCyberButton(
+                            label: 'FULL',
+                            isSelected: _selectedLength.toUpperCase() == 'FULL',
+                            onTap: () => setState(() => _selectedLength = 'FULL'),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildCyberButton(
+                            label: 'GOOD',
+                            isSelected: _selectedLength.toUpperCase() == 'GOOD',
+                            onTap: () => setState(() => _selectedLength = 'GOOD'),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildCyberButton(
+                            label: 'SHORT',
+                            isSelected: _selectedLength.toUpperCase() == 'SHORT',
+                            onTap: () => setState(() => _selectedLength = 'SHORT'),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // ── 7. SAVE OVER CONFIGURATION (Hero Button) ───────────
+                      GestureDetector(
                         onTap: _onSave,
                         child: Container(
-                          height: 50,
+                          height: 52,
+                          width: double.infinity,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(14),
-                            gradient: AppTheme.primaryCtaGradient,
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF0072FF), Color(0xFF00D4FF)],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                            ),
+                            borderRadius: BorderRadius.circular(26),
                             boxShadow: [
                               BoxShadow(
-                                color: AppTheme.electricBlue.withAlpha(80),
-                                blurRadius: 12,
+                                color: const Color(0xFF00D4FF).withValues(alpha: 0.45),
+                                blurRadius: 16,
                                 offset: const Offset(0, 4),
                               ),
                             ],
                           ),
-                          child: Center(
+                          child: const Center(
                             child: Text(
-                              widget.sessionToEdit != null ? 'Update & Save' : 'Save',
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
+                              'SAVE OVER CONFIGURATION',
+                              style: TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w900,
                                 color: Colors.white,
+                                letterSpacing: 0.8,
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: _onCopyToAllOvers,
-                        child: Container(
-                          height: 50,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(14),
-                            gradient: AppTheme.primaryCtaGradient,
-                          ),
-                          child: Container(
-                            margin: const EdgeInsets.all(1.5),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12.5),
-                            ),
-                            child: Center(
-                              child: ShaderMask(
-                                shaderCallback: (bounds) =>
-                                    AppTheme.primaryCtaGradient.createShader(bounds),
-                                child: const Text(
-                                  'Copy to All Overs',
-                                  style: TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -1099,120 +883,122 @@ class _SessionConfigScreenState extends State<SessionConfigScreen> {
     );
   }
 
-  Widget _buildCardContainer({required Widget child}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFFE2E8F0),
-          width: 1.1,
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w800,
+          color: Color(0xFF00C6FF),
+          letterSpacing: 1.2,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: child,
-    );
-  }
-
-  Widget _buildCardTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 13.5,
-        fontWeight: FontWeight.w800,
-        color: AppTheme.navyBlue,
       ),
     );
   }
 
-  Widget _buildSelectableButton({
+  Widget _buildCyberButton({
     required String label,
-    IconData? icon,
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          gradient: isSelected ? AppTheme.primaryCtaGradient : null,
-          color: isSelected ? null : const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? Colors.transparent : const Color(0xFFE2E8F0),
-            width: 1.1,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppTheme.electricBlue.withAlpha(50),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : [],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (icon != null) ...[
-              Icon(
-                icon,
-                size: 16,
-                color: isSelected ? Colors.white : AppTheme.navyBlue,
-              ),
-              const SizedBox(width: 5),
-            ],
-            Flexible(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w800,
-                  color: isSelected ? Colors.white : AppTheme.navyBlue,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          height: 48,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            gradient: isSelected
+                ? const LinearGradient(
+                    colors: [Color(0xFF0072FF), Color(0xFF00C6FF)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  )
+                : null,
+            color: isSelected ? null : const Color(0xFF0B1325),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected ? Colors.transparent : const Color(0xFF1E2B45),
+              width: 1.2,
             ),
-          ],
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF00C6FF).withValues(alpha: 0.4),
+                      blurRadius: 12,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                : [],
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
+              color: isSelected ? Colors.white : const Color(0xFF94A3B8),
+              letterSpacing: 0.3,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildToggleRow({
-    required String title,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: AppTheme.navyBlue,
+  Widget _buildSpeedCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0B1325),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF1E2B45),
+          width: 1.2,
+        ),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: const [
+                Text('50', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8))),
+                Text('70', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8))),
+                Text('90', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8))),
+                Text('110', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8))),
+                Text('130', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8))),
+                Text('150', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8))),
+              ],
+            ),
           ),
-        ),
-        CyberGradientSwitch(
-          value: value,
-          onChanged: onChanged,
-        ),
-      ],
+          const SizedBox(height: 6),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: const Color(0xFF00C6FF),
+              inactiveTrackColor: const Color(0xFF1E2B45),
+              thumbColor: const Color(0xFF00E5FF),
+              overlayColor: const Color(0xFF00E5FF).withValues(alpha: 0.18),
+              trackHeight: 3.5,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8.5),
+            ),
+            child: Slider(
+              value: _ballSpeed.clamp(50.0, 150.0),
+              min: 50.0,
+              max: 150.0,
+              divisions: 10,
+              onChanged: (val) => setState(() => _ballSpeed = val),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
